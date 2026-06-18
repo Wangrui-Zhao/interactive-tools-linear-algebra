@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kernel · Image · Preimage</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, serif; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; background: #fafafa; color: #222; }
+  h2 { margin-bottom: 4px; text-align: center; }
+  p.sub { color: #555; margin: 0 0 16px; font-style: italic; font-size: 0.93em; text-align: center; }
+
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+  .tab { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #bbb; background: #fff; cursor: pointer; font-size: 0.9em; font-family: Georgia, serif; transition: background 0.15s; }
+  .tab.active { color: #fff; border-color: transparent; }
+  .tab.t-kernel.active  { background: #c8a000; }
+  .tab.t-image.active   { background: #27ae60; }
+  .tab.t-pre.active     { background: #8e44ad; }
+
+  .main { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+
+  canvas { background: #fff; border: 1.5px solid #ccc; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); cursor: crosshair; touch-action: none; }
+
+  .side { display: flex; flex-direction: column; gap: 14px; width: 210px; }
+
+  .card { background: #fff; border: 1.5px solid #ddd; border-radius: 10px; padding: 10px 12px; }
+  .card .lbl { font-size: 0.82em; font-weight: bold; color: #555; margin-bottom: 6px; }
+
+  .mat-row { display: flex; align-items: center; gap: 4px; }
+  .mat-grid { display: grid; grid-template-columns: 54px 54px; gap: 4px; }
+  input.cell { width: 54px; height: 30px; text-align: center; font-size: 0.95em; font-family: Georgia, serif; border: 1.5px solid #ccc; border-radius: 5px; background: #fff; outline: none; }
+  input.cell:focus { border-color: #1a6fc4; background: #eef4ff; }
+  .mat-stat { font-size: 0.8em; color: #888; margin-top: 5px; }
+  .brk { font-size: 1.6em; color: #555; font-weight: 100; line-height: 1; }
+
+  .info { border-radius: 10px; padding: 10px 12px; font-size: 0.87em; line-height: 1.65; }
+  .info .ititle { font-weight: bold; margin-bottom: 4px; font-size: 0.88em; }
+
+  .hint { font-size: 0.85em; color: #777; font-style: italic; text-align: center; margin-top: 6px; }
+
+  .eq-box {
+    background: #fff; border: 1.5px solid #ddd; border-radius: 10px;
+    padding: 10px 16px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.06);
+    font-size: 0.97em; line-height: 1.8;
+  }
+  .eq-box .eq-title { font-size: 0.83em; font-weight: bold; color: #888; margin-bottom: 4px; }
+  .eq-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .eq-lhs { color: #555; min-width: 280px; }
+  .eq-rhs { font-weight: bold; }
+  .eq-num { color: #1a6fc4; }
+  .eq-var { color: #555; font-style: italic; }
+  .eq-zero { color: #888; }
+  .eq-result { color: #27ae60; font-weight: bold; }
+  .eq-y     { color: #2980b9; font-weight: bold; }
+  .eq-sep { color: #bbb; margin: 0 4px; }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <button class="tab t-kernel active" onclick="setMode('kernel')">Kernel</button>
+  <button class="tab t-image"  onclick="setMode('image')">Image</button>
+  <button class="tab t-pre"    onclick="setMode('preimage')">Preimage</button>
+</div>
+
+<div style="display:flex; flex-direction:column; align-items:center; gap:14px; width:100%;">
+  <canvas id="c" width="660" height="370"></canvas>
+
+  <div style="display:flex; gap:12px; width:660px; align-items:flex-start; flex-wrap:wrap;">
+
+    <!-- Matrix -->
+    <div class="card" style="flex:0 0 auto;">
+      <div class="lbl">f : ℝ² → ℝ²</div>
+      <div class="mat-row">
+        <span class="brk">(</span>
+        <div class="mat-grid">
+          <input class="cell" id="a00" type="number" value="1"  step="0.5">
+          <input class="cell" id="a01" type="number" value="2"  step="0.5">
+          <input class="cell" id="a10" type="number" value="1"  step="0.5">
+          <input class="cell" id="a11" type="number" value="2"  step="0.5">
+        </div>
+        <span class="brk">)</span>
+      </div>
+      <div class="mat-stat" id="matStat">rank 1</div>
+    </div>
+
+    <!-- Equations -->
+    <div class="eq-box" id="eqBox" style="flex:1;">
+      <div class="eq-title" id="eqTitle"></div>
+      <div id="eqRow1" class="eq-row"></div>
+      <div id="eqRow2" class="eq-row"></div>
+    </div>
+
+    <!-- Info -->
+    <div class="info card" id="infoCard" style="flex:1;">
+      <div class="ititle" id="infoTitle">Kernel</div>
+      <div id="infoText"></div>
+      <p class="hint" id="hintText"></p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const dpr = window.devicePixelRatio || 1;
+const W = 660, H = 370;
+canvas.width = W*dpr; canvas.height = H*dpr;
+canvas.style.width = W+'px'; canvas.style.height = H+'px';
+ctx.scale(dpr, dpr);
+
+// Layout
+const MID = W/2;           // 330
+const CX_L = 150, CX_R = W-150, CY = H/2;
+const S = 46, RANGE = 3;
+
+let mode = 'kernel';
+let dragX = [1, 0.5];
+let dragY = [1, 1];
+let isDragging = false;
+
+// ── Matrix helpers ─────────────────────────────────────────────
+function getA(){
+  return [[v('a00'),v('a01')],[v('a10'),v('a11')]];
+}
+function v(id){ return parseFloat(document.getElementById(id).value)||0; }
+function mul(A,x){ return [A[0][0]*x[0]+A[0][1]*x[1], A[1][0]*x[0]+A[1][1]*x[1]]; }
+function det(A){ return A[0][0]*A[1][1]-A[0][1]*A[1][0]; }
+function rnk(A){
+  const d=det(A);
+  if(Math.abs(d)>1e-9) return 2;
+  return A.flat().some(x=>Math.abs(x)>1e-9) ? 1 : 0;
+}
+
+// Returns kernel direction (not normalized), 'plane', or null (trivial)
+function kernelDir(A){
+  const r=rnk(A);
+  if(r===2) return null;
+  if(r===0) return 'plane';
+  const [a,b]=A[0],[c,d]=A[1];
+  let kx,ky;
+  if(Math.abs(a)+Math.abs(b)>1e-9){ kx=-b; ky=a; }
+  else { kx=-d; ky=c; }
+  // normalize only for drawing direction, keep raw for display
+  const len=Math.sqrt(kx*kx+ky*ky);
+  const dir = [kx/len, ky/len];
+  dir.raw = [kx, ky]; // store raw integer-ish values for display
+  return dir;
+}
+
+// Returns image direction (unit + raw), 'plane', or null (zero map)
+function imageDir(A){
+  const r=rnk(A);
+  if(r===2) return 'plane';
+  if(r===0) return null;
+  const c1=[A[0][0],A[1][0]], c2=[A[0][1],A[1][1]];
+  const l1=Math.hypot(...c1), l2=Math.hypot(...c2);
+  let raw, len;
+  if(l1>1e-9){ raw=c1; len=l1; }
+  else if(l2>1e-9){ raw=c2; len=l2; }
+  else return null;
+  const dir=[raw[0]/len, raw[1]/len];
+  dir.raw=raw;
+  return dir;
+}
+
+// Solve Ax=y
+function solveAx(A,y){
+  const r=rnk(A), kd=kernelDir(A), id=imageDir(A);
+  if(r===2){
+    const d=det(A);
+    return {type:'point', x0:[(A[1][1]*y[0]-A[0][1]*y[1])/d, (-A[1][0]*y[0]+A[0][0]*y[1])/d]};
+  }
+  if(r===0){
+    return (Math.hypot(...y)<1e-9) ? {type:'plane'} : {type:'empty'};
+  }
+  // rank 1: check if y in image (fixed tolerance ≈ 3 pixels in data units)
+  const cross=Math.abs(y[0]*id[1]-y[1]*id[0]);
+  if(cross>0.08) return {type:'empty'};
+  // snap y onto image line for consistent display
+  const dot=y[0]*id[0]+y[1]*id[1];
+  const ySnap=[dot*id[0], dot*id[1]];
+  // find particular solution using snapped y
+  const [a,b]=A[0],[c,d]=A[1];
+  let x0;
+  if(Math.abs(a)>1e-9)      x0=[ySnap[0]/a, 0];
+  else if(Math.abs(b)>1e-9) x0=[0, ySnap[0]/b];
+  else if(Math.abs(c)>1e-9) x0=[ySnap[1]/c, 0];
+  else                       x0=[0, ySnap[1]/d];
+  return {type:'line', x0, dir:kd, ySnap};
+}
+
+// ── Canvas helpers ──────────────────────────────────────────────
+function toCL(x,y){ return [CX_L+x*S, CY-y*S]; }
+function toCR(x,y){ return [CX_R+x*S, CY-y*S]; }
+function fromCL(px,py){ return [(px-CX_L)/S, (CY-py)/S]; }
+function fromCR(px,py){ return [(px-CX_R)/S, (CY-py)/S]; }
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+
+function drawGrid(cx){
+  ctx.save();
+  ctx.strokeStyle='#ebebeb'; ctx.lineWidth=1; ctx.setLineDash([]);
+  for(let v=-RANGE;v<=RANGE;v++){
+    ctx.beginPath(); ctx.moveTo(cx+v*S,CY-RANGE*S); ctx.lineTo(cx+v*S,CY+RANGE*S); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-RANGE*S,CY-v*S); ctx.lineTo(cx+RANGE*S,CY-v*S); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle='#bbb'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(cx-RANGE*S,CY); ctx.lineTo(cx+RANGE*S,CY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,CY-RANGE*S); ctx.lineTo(cx,CY+RANGE*S); ctx.stroke();
+  // Tick labels
+  ctx.fillStyle='#ccc'; ctx.font='10px Georgia'; ctx.textAlign='center';
+  for(let v=-RANGE;v<=RANGE;v++){
+    if(v===0) continue;
+    ctx.fillText(v, cx+v*S, CY+14);
+    ctx.textAlign='right'; ctx.fillText(v, cx-4, CY-v*S+4); ctx.textAlign='center';
+  }
+  ctx.restore();
+}
+
+function clipToSide(cx){
+  ctx.beginPath();
+  if(cx===CX_L) ctx.rect(0, 0, MID-18, H);
+  else           ctx.rect(MID+18, 0, W-(MID+18), H);
+  ctx.clip();
+}
+
+function fillSubspace(cx, color, dir){
+  ctx.save();
+  clipToSide(cx);
+  if(dir==='plane'){
+    ctx.fillStyle=color;
+    ctx.fillRect(cx-RANGE*S, CY-RANGE*S, RANGE*2*S, RANGE*2*S);
+  } else if(dir){
+    const [dx,dy]=[dir[0]*S,-dir[1]*S];
+    const ext=RANGE*S*2;
+    ctx.strokeStyle=color; ctx.lineWidth=4; ctx.globalAlpha=1;
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(cx-dx*ext/S,CY-dy*ext/S); ctx.lineTo(cx+dx*ext/S,CY+dy*ext/S); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLine(cx,px,py,dir,color,lw,dash){
+  const [cpx,cpy]=[cx+px*S,CY-py*S];
+  const [ddx,ddy]=[dir[0],dir[1]];
+  const ext=RANGE*S*2.5;
+  ctx.save();
+  clipToSide(cx);
+  ctx.strokeStyle=color; ctx.lineWidth=lw||2.5;
+  if(dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(cpx-ddx*ext, cpy+ddy*ext);
+  ctx.lineTo(cpx+ddx*ext, cpy-ddy*ext);
+  ctx.stroke(); ctx.restore();
+}
+
+function drawPt(cx,x,y,color,r,label,loff){
+  const [px,py]=[cx+x*S, CY-y*S];
+  ctx.save(); ctx.fillStyle=color;
+  ctx.beginPath(); ctx.arc(px,py,r||7,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+  if(label){
+    ctx.fillStyle=color; ctx.font='bold 13px Georgia'; ctx.textAlign='left';
+    ctx.fillText(label, px+(loff?loff[0]:9), py+(loff?loff[1]:-5));
+  }
+  ctx.restore();
+}
+
+// Straight arrow within one coordinate system
+function drawLocalArrow(cx, x0, y0, x1, y1, color, lw){
+  const [fx,fy]=[cx+x0*S, CY-y0*S];
+  const [tx,ty]=[cx+x1*S, CY-y1*S];
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color;
+  ctx.lineWidth=lw||2.2; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(tx,ty); ctx.stroke();
+  const ang=Math.atan2(ty-fy, tx-fx);
+  ctx.beginPath(); ctx.moveTo(tx,ty);
+  ctx.lineTo(tx-9*Math.cos(ang-0.35),ty-9*Math.sin(ang-0.35));
+  ctx.lineTo(tx-9*Math.cos(ang+0.35),ty-9*Math.sin(ang+0.35));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawCurvedArrow(x0,y0,x1,y1,color){
+  const [fx,fy]=toCL(x0,y0), [tx,ty]=toCR(x1,y1);
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color;
+  ctx.lineWidth=2; ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(fx,fy);
+  const mx=(fx+tx)/2;
+  ctx.bezierCurveTo(mx,fy,mx,ty,tx,ty);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const ang=Math.atan2(ty-fy, tx-fx);
+  ctx.beginPath(); ctx.moveTo(tx,ty);
+  ctx.lineTo(tx-10*Math.cos(ang-0.3),ty-10*Math.sin(ang-0.3));
+  ctx.lineTo(tx-10*Math.cos(ang+0.3),ty-10*Math.sin(ang+0.3));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ── Draw modes ──────────────────────────────────────────────────
+function drawKernelMode(A,kd,id){
+  // Domain: show kernel subspace (yellow)
+  if(kd==='plane'){
+    fillSubspace(CX_L,'rgba(230,183,0,0.22)','plane');
+  } else if(kd){
+    fillSubspace(CX_L,'rgba(230,183,0,0.6)',kd);
+    drawLine(CX_L,0,0,kd,'rgba(200,160,0,0.95)',3);
+  }
+  drawPt(CX_L,0,0,'#c8a000',8,'0',[10,-4]);
+
+  // Sample kernel arrows → origin in codomain
+  if(kd && kd!=='plane'){
+    for(const t of [-2,-1.2,1.2,2]){
+      const kx=kd[0]*t, ky=kd[1]*t;
+      if(Math.abs(kx)<=RANGE+0.2 && Math.abs(ky)<=RANGE+0.2){
+        drawCurvedArrow(kx,ky,0,0,'rgba(180,180,180,0.45)');
+        drawPt(CX_L,kx,ky,'#c8a000',4);
+      }
+    }
+  } else if(kd===null){
+    drawCurvedArrow(0,0,0,0,'rgba(180,180,180,0.5)');
+  }
+
+  // Codomain: origin highlighted, image shown faintly
+  if(id==='plane') fillSubspace(CX_R,'rgba(39,174,96,0.1)','plane');
+  else if(id) fillSubspace(CX_R,'rgba(39,174,96,0.25)',id);
+  drawPt(CX_R,0,0,'#2980b9',10,'0',[10,-4]);
+}
+
+function drawImageMode(A,id){
+  const x=dragX, Ax=mul(A,x);
+
+  // Codomain: show image subspace
+  if(id==='plane') fillSubspace(CX_R,'rgba(39,174,96,0.12)','plane');
+  else if(id) fillSubspace(CX_R,'rgba(39,174,96,0.55)',id);
+
+  // Arrow x → Ax
+  drawCurvedArrow(x[0],x[1],Ax[0],Ax[1],'rgba(80,80,200,0.65)');
+
+  drawPt(CX_L,x[0],x[1],'#c0392b',8,'x');
+  drawPt(CX_R,Ax[0],Ax[1],'#27ae60',8,'f(x)');
+}
+
+function drawPreimageMode(A,kd,id){
+  const y=dragY, sol=solveAx(A,y);
+
+  // Codomain: show image guide + y
+  if(id==='plane') fillSubspace(CX_R,'rgba(39,174,96,0.1)','plane');
+  else if(id) fillSubspace(CX_R,'rgba(39,174,96,0.3)',id);
+  drawPt(CX_R,y[0],y[1],'#2980b9',8,'y');
+
+  // Domain: preimage
+  if(sol.type==='empty'){
+    ctx.save(); ctx.fillStyle='rgba(192,57,43,0.13)';
+    ctx.fillRect(CX_L-RANGE*S, CY-RANGE*S, RANGE*2*S, RANGE*2*S);
+    ctx.fillStyle='#c0392b'; ctx.font='bold 13px Georgia'; ctx.textAlign='center';
+    ctx.fillText('preimage = ∅', CX_L, CY-10);
+    ctx.font='12px Georgia'; ctx.fillStyle='#e74c3c';
+    ctx.fillText('y ∉ im(f)', CX_L, CY+12);
+    ctx.restore();
+  } else if(sol.type==='point'){
+    const x0=sol.x0;
+    drawCurvedArrow(x0[0],x0[1],y[0],y[1],'rgba(80,80,200,0.6)');
+    drawPt(CX_L,x0[0],x0[1],'#8e44ad',8,'f⁻¹(y)',[10,-4]);
+  } else if(sol.type==='line'){
+    const {x0,dir}=sol;
+    // kernel line (faint yellow reference)
+    if(dir && dir!=='plane') drawLine(CX_L,0,0,dir,'rgba(200,160,0,0.35)',1.5,[3,5]);
+    // preimage line
+    drawLine(CX_L,x0[0],x0[1],dir,'rgba(142,68,173,0.85)',3);
+    // multiple arrows to show all preimage solutions
+    [-1.5, -0.8, 0.8, 1.5].forEach(t => {
+      const px=x0[0]+dir[0]*t, py=x0[1]+dir[1]*t;
+      if(Math.abs(px)<=RANGE+0.3 && Math.abs(py)<=RANGE+0.3){
+        drawLocalArrow(CX_L, 0, 0, px, py, 'rgba(142,68,173,0.35)', 1.8);
+        drawPt(CX_L, px, py, 'rgba(142,68,173,0.35)', 4);
+      }
+    });
+    // main particular solution
+    drawLocalArrow(CX_L, 0, 0, x0[0], x0[1], '#8e44ad', 2.5);
+    drawPt(CX_L, x0[0], x0[1], '#8e44ad', 7);
+    // label the line
+    ctx.save(); ctx.fillStyle='rgba(142,68,173,0.75)'; ctx.font='bold 12px Georgia';
+    ctx.fillText('f⁻¹(y)', CX_L + (x0[0]+dir[0]*1.8)*S + 8, CY - (x0[1]+dir[1]*1.8)*S - 6);
+    ctx.restore();
+    // cross-system arrow x₀ → y
+    drawCurvedArrow(x0[0],x0[1],y[0],y[1],'rgba(80,80,200,0.55)');
+  } else if(sol.type==='plane'){
+    fillSubspace(CX_L,'rgba(142,68,173,0.15)','plane');
+  }
+}
+
+// ── Main draw ───────────────────────────────────────────────────
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const A=getA(), r=rnk(A), kd=kernelDir(A), id=imageDir(A);
+
+  // Grid backgrounds
+  ctx.save();
+  ctx.fillStyle='rgba(255,240,240,0.5)';
+  ctx.fillRect(CX_L-RANGE*S-8,CY-RANGE*S-8,RANGE*2*S+16,RANGE*2*S+16);
+  ctx.fillStyle='rgba(240,240,255,0.5)';
+  ctx.fillRect(CX_R-RANGE*S-8,CY-RANGE*S-8,RANGE*2*S+16,RANGE*2*S+16);
+  ctx.restore();
+
+  // Middle separator
+  ctx.save(); ctx.fillStyle='#e0e0e0'; ctx.fillRect(MID-18, CY-RANGE*S-10, 36, RANGE*S*2+20);
+  ctx.fillStyle='#999'; ctx.font='bold 12px Georgia'; ctx.textAlign='center';
+  ctx.fillText('f', MID, H/2-8); ctx.fillText('⟶', MID, H/2+12);
+  ctx.restore();
+
+  drawGrid(CX_L); drawGrid(CX_R);
+
+  // Panel labels
+  ctx.save(); ctx.font='bold 13px Georgia'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(192,57,43,0.8)'; ctx.fillText('Domain ℝ²', CX_L, 18);
+  ctx.fillStyle='rgba(41,128,185,0.8)'; ctx.fillText('Codomain ℝ²', CX_R, 18);
+  ctx.restore();
+
+  if(mode==='kernel')   drawKernelMode(A,kd,id);
+  else if(mode==='image') drawImageMode(A,id);
+  else                   drawPreimageMode(A,kd,id);
+
+  updateSide(A,r,kd,id);
+  updateEquations(A);
+}
+
+// ── Side panel ──────────────────────────────────────────────────
+function updateSide(A,r,kd,id){
+  const d=det(A);
+  document.getElementById('matStat').textContent=`rank ${r}`;
+
+  const colors={kernel:'#8a6d00',image:'#1a7a3c',preimage:'#6c2e9e'};
+  const card=document.getElementById('infoCard');
+  card.style.background= mode==='kernel'?'#fffbea': mode==='image'?'#eafbf0':'#f5eeff';
+  card.style.borderColor= mode==='kernel'?'#f0c040': mode==='image'?'#a3e6bb':'#c9a0ef';
+  document.getElementById('infoTitle').style.color=colors[mode];
+
+  let title,text,hint;
+  if(mode==='kernel'){
+    title='Kernel ker(f)';
+    if(r===2)      text='ker(f) = <b>{0}</b><br>Only <b>0</b> maps to <b>0</b>. f is injective.';
+    else if(r===1){
+      const kf=fmt(kd);
+      text=`ker(f) = span<b>(${kf})</b><br>Every yellow point maps to <b>0</b>.`;
+    } else         text='ker(f) = ℝ² — f is the zero map.';
+    hint='';
+  } else if(mode==='image'){
+    title='Image im(f)';
+    if(r===2)      text='im(f) = ℝ² — f is surjective.<br>Every y is hit by some x.';
+    else if(r===1){
+      const idf=imageDir(A); const sf=fmt(idf);
+      text=`im(f) = span<b>(${sf})</b><br>Drag x — f(x) stays on the green line.`;
+    } else         text='im(f) = {0} — f maps everything to 0.';
+    hint='';
+  } else {
+    title='Preimage f⁻¹(y)';
+    const sol=solveAx(A,dragY);
+    if(sol.type==='empty')
+      text='y ∉ im(f) — no solution.<br>Drag y onto the green line.';
+    else if(sol.type==='point')
+      text='f is invertible.<br>Unique preimage: f⁻¹(y).';
+    else if(sol.type==='line')
+      text='Preimage = x₀ + ker(f)<br>Any point on the line works as x₀ — different arrows, same line.';
+    else
+      text='Preimage = ℝ² (f=0, y=0).';
+    hint='';
+  }
+  document.getElementById('infoTitle').textContent=title;
+  document.getElementById('infoText').innerHTML=text;
+  document.getElementById('hintText').textContent=hint;
+}
+
+// ── Equation display ────────────────────────────────────────────
+function fmt2(x){ return parseFloat(x.toFixed(2)); }
+function n(x){ return `<span class="eq-num">${fmt2(x)}</span>`; }
+function nf(x){ // with sign for middle terms
+  const val = Number.isInteger(x)?x:parseFloat(x.toFixed(2));
+  const sign = val<0 ? '−' : '+';
+  return `${sign} ${n(Math.abs(val))}`;
+}
+
+function buildEqLHS(a1,a2){
+  return `${n(a1)}<i>·x₁</i> ${nf(a2)}<i>·x₂</i>`;
+}
+
+function updateEquations(A){
+  const [[a,b],[c,d]] = A;
+  let title, r1, r2;
+  const box = document.getElementById('eqBox');
+
+  if(mode==='kernel'){
+    title = 'f(x) = <b>0</b>';
+    r1 = `${buildEqLHS(a,b)} &nbsp;= <span class="eq-zero">0</span>`;
+    r2 = `${buildEqLHS(c,d)} &nbsp;= <span class="eq-zero">0</span>`;
+    box.style.borderColor='#f0c040';
+  } else if(mode==='image'){
+    const [x1,x2]=dragX, Ax=mul(A,dragX);
+    title = `f(x)`;
+    r1 = `${buildEqLHS(a,b)} &nbsp;= <span class="eq-result">${n(Ax[0])}</span>`;
+    r2 = `${buildEqLHS(c,d)} &nbsp;= <span class="eq-result">${n(Ax[1])}</span>`;
+    box.style.borderColor='#a3e6bb';
+  } else {
+    const [y1,y2]=dragY;
+    const sol=solveAx(A,dragY);
+    title = `f(x) = <b>y</b>`;
+    box.style.borderColor='#c9a0ef';
+    if(sol.type==='empty'){
+      r1 = `<span style="color:#c0392b; font-style:italic;">no solution — y ∉ im(f)</span>`;
+      r2 = '';
+    } else {
+      const ey = sol.ySnap || [y1,y2];
+      r1 = `${buildEqLHS(a,b)} &nbsp;= <span class="eq-y">${n(ey[0])}</span>`;
+      r2 = `${buildEqLHS(c,d)} &nbsp;= <span class="eq-y">${n(ey[1])}</span>`;
+    }
+  }
+
+  document.getElementById('eqTitle').innerHTML = title;
+  document.getElementById('eqRow1').innerHTML = r1;
+  document.getElementById('eqRow2').innerHTML = r2;
+}
+
+function fmt(dir){
+  if(!dir||dir==='plane') return '?';
+  // use raw integer-ish values if available, otherwise unit vector
+  const d = dir.raw || dir;
+  const fx = Number.isInteger(d[0]) ? d[0] : parseFloat(d[0].toFixed(2));
+  const fy = Number.isInteger(d[1]) ? d[1] : parseFloat(d[1].toFixed(2));
+  return `${fx}, ${fy}`;
+}
+
+// ── Mode & input ────────────────────────────────────────────────
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.remove('active');
+    if(t.classList.contains('t-'+m)||
+       (m==='preimage'&&t.classList.contains('t-pre'))) t.classList.add('active');
+  });
+  draw();
+}
+
+['a00','a01','a10','a11'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', draw);
+});
+
+// Pointer events
+function getPos(e){
+  const r=canvas.getBoundingClientRect();
+  return [(e.clientX-r.left)*W/r.width, (e.clientY-r.top)*H/r.height];
+}
+canvas.addEventListener('dragstart',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{ isDragging=true; canvas.setPointerCapture(e.pointerId); onPtr(e); });
+canvas.addEventListener('pointermove',e=>{ if(isDragging) onPtr(e); });
+canvas.addEventListener('pointerup',()=>{ isDragging=false; });
+
+const SNAP = 0.25; // snap to origin within this radius
+
+function snapOrigin(x, y){ return Math.hypot(x,y) < SNAP ? [0,0] : [x,y]; }
+
+function onPtr(e){
+  const [px,py]=getPos(e);
+  if(mode==='image' && px<MID-18){
+    const [x,y]=fromCL(px,py);
+    dragX=snapOrigin(clamp(x,-RANGE,RANGE), clamp(y,-RANGE,RANGE));
+    draw();
+  } else if(mode==='preimage' && px>MID+18){
+    const [x,y]=fromCR(px,py);
+    dragY=snapOrigin(clamp(x,-RANGE,RANGE), clamp(y,-RANGE,RANGE));
+    draw();
+  }
+}
+
+draw();
+</script>
+</body>
+</html>
