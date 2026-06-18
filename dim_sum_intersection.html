@@ -102,7 +102,7 @@
 
     <!-- slider — above info-cards so insight text can't push it -->
     <div class="slider-wrap" id="sliderWrap" style="visibility:hidden">
-      <label id="sliderLabel">Angle of B (θ)</label>
+      <label id="sliderLabel">Tilt angle θ of line B</label>
       <input type="range" id="angleSlider" min="0" max="180" value="90" step="1">
       <div class="angle-val" id="angleVal">θ = 90°</div>
     </div>
@@ -355,7 +355,7 @@ function draw(){
 
     // angle: 0° = z-axis (perpendicular to plane), 90° = line lies in plane
     const θ1 = angle * Math.PI / 180;
-    const inPlane = angle >= 88;
+    const inPlane = Math.abs(angle - 90) <= 2;
     const ext1 = 3.2;
     const dy1 = Math.sin(θ1), dz1 = Math.cos(θ1);
 
@@ -420,7 +420,7 @@ function draw(){
     // Two planes in R³ — proper isometric 3D view
     // A = xy-plane, B = plane containing x-axis, tilted by angle θ around x-axis
     const θ = angle * Math.PI / 180;
-    const isParallel = (angle === 0 || angle === 180);
+    const isParallel = (angle === 90);
 
     // 3D projection params (oblique)
     const S3 = 46, Sz3 = S3*0.52, ZA3 = Math.PI/5;
@@ -473,10 +473,10 @@ function draw(){
     const A_pts = [p3(-ext,-ext,0),p3(ext,-ext,0),p3(ext,ext,0),p3(-ext,ext,0)];
     // Plane B corners: tilted θ around x-axis → y→y·cosθ, z→y·sinθ
     const B_pts = [
-      p3(-ext,-ext*Math.cos(θ),-ext*Math.sin(θ)),
-      p3( ext,-ext*Math.cos(θ),-ext*Math.sin(θ)),
-      p3( ext, ext*Math.cos(θ), ext*Math.sin(θ)),
-      p3(-ext, ext*Math.cos(θ), ext*Math.sin(θ))
+      p3(-ext,-ext*Math.sin(θ),-ext*Math.cos(θ)),
+      p3( ext,-ext*Math.sin(θ),-ext*Math.cos(θ)),
+      p3( ext, ext*Math.sin(θ), ext*Math.cos(θ)),
+      p3(-ext, ext*Math.sin(θ), ext*Math.cos(θ))
     ];
 
     if(isParallel){
@@ -523,8 +523,8 @@ function draw(){
       ctx.fillStyle='#c0392b';
       const [alx,aly]=p3(-ext*0.5, ext*0.7,0); ctx.fillText('A (xy-plane)',alx,aly);
       ctx.fillStyle='#2980b9';
-      const [blx,bly]=p3(-ext*0.4, ext*0.6*Math.cos(θ), ext*0.6*Math.sin(θ));
-      ctx.fillText('B (tilted plane)',blx,bly-10);
+      const [blx,bly]=p3(-ext*0.4, ext*0.6*Math.sin(θ), ext*0.6*Math.cos(θ));
+      ctx.fillText('B (tilted plane)',blx,bly+20);
       ctx.fillStyle='#8e44ad';
       const [ilx,ily]=p3(ext*0.6,0,0); ctx.fillText('A∩B = x-axis',ilx+4,ily-10);
       ctx.restore();
@@ -534,10 +534,10 @@ function draw(){
 
       set('nA','2'); set('nB','2'); set('nI','1'); set('nS','3');
       set('descA','A = xy-plane (dim 2)');
-      set('descB',`B = plane tilted ${angle}° around x-axis (dim 2)`);
+      set('descB',`B = plane at ${angle}° from xz-plane (dim 2)`);
       set('descI','A ∩ B = x-axis (dim 1)');
       set('descS','A + B = ℝ³ (dim 3)');
-      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³. Drag θ → 0° to see what happens when the planes coincide.`);
+      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³. Drag θ → 90° to see what happens when the planes coincide.`);
     }
     document.getElementById('sliderWrap').style.visibility='visible';
     document.getElementById('sliderLabel').textContent='Tilt angle θ of plane B';
@@ -548,6 +548,14 @@ function set(id,html){ document.getElementById(id).innerHTML=html; }
 
 document.getElementById('angleSlider').addEventListener('input',e=>{
   angle=parseInt(e.target.value);
+  // snap to key angles for case 1 (90°) and case 2 (90°)
+  if((caseIdx===1||caseIdx===2) && Math.abs(angle-90)<=4){
+    angle=90;
+    e.target.value=90;
+  }
+  if(caseIdx===0 && Math.abs(angle-90)<=4){
+    angle=90; e.target.value=90;
+  }
   document.getElementById('angleVal').textContent=`θ = ${angle}°`;
   draw();
 });
@@ -562,22 +570,24 @@ function setCase(ci){
     document.getElementById('angleSlider').value=90;
     document.getElementById('angleVal').textContent='θ = 90°';
     document.getElementById('sliderWrap').style.visibility='visible';
-    document.getElementById('sliderLabel').textContent='Angle of B (θ)';
+    document.getElementById('sliderLabel').textContent='Tilt angle θ of line B';
+
   } else if(ci===1){
     angle=0;
     document.getElementById('angleSlider').min=0;
-    document.getElementById('angleSlider').max=90;
+    document.getElementById('angleSlider').max=180;
     document.getElementById('angleSlider').value=0;
     document.getElementById('angleVal').textContent='θ = 0°';
     document.getElementById('sliderWrap').style.visibility='visible';
-    document.getElementById('sliderLabel').textContent='Tilt from z-axis (θ) — 90° = line in plane';
+    document.getElementById('sliderLabel').textContent='Tilt angle θ of line A';
   } else if(ci===2){
-    angle=90;
+    angle=0;
     document.getElementById('angleSlider').min=0;
     document.getElementById('angleSlider').max=180;
-    document.getElementById('angleSlider').value=90;
-    document.getElementById('angleVal').textContent='θ = 90°';
+    document.getElementById('angleSlider').value=0;
+    document.getElementById('angleVal').textContent='θ = 0°';
     document.getElementById('sliderWrap').style.visibility='visible';
+    document.getElementById('sliderLabel').textContent='Tilt angle θ of plane B';
   }
   draw();
 }
