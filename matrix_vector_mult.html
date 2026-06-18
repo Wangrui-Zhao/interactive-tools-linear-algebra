@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Definition 4.9 – Matrix-Vector Multiplication</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Georgia, serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 30px 20px; background: #fafafa; color: #222;
+  }
+  h2 { margin-bottom: 4px; text-align: center; }
+  p.sub { color: #555; margin: 0 0 24px; font-style: italic; font-size: 0.93em; text-align: center; }
+
+  .equation {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap; justify-content: center;
+  }
+
+  .op { font-size: 1.6em; color: #555; padding: 0 4px; }
+
+  /* bracket wrapper */
+  .bracket-wrap {
+    display: flex; align-items: stretch; gap: 0;
+  }
+  .bracket {
+    display: flex; align-items: center;
+    font-size: 3.2em; font-weight: 100; color: #444;
+    line-height: 1; padding: 0 2px;
+    user-select: none;
+  }
+
+  /* matrix grid */
+  .matrix-grid {
+    display: grid;
+    gap: 6px;
+    padding: 8px 4px;
+  }
+  .matrix-grid.m4n3 { grid-template-columns: repeat(3, 52px); }
+  .matrix-grid.m3n1 { grid-template-columns: 52px; }
+  .matrix-grid.m4n1 { grid-template-columns: 72px; }
+
+  /* editable cells */
+  input.cell {
+    width: 52px; height: 36px;
+    text-align: center; font-size: 1em; font-family: Georgia, serif;
+    border: 1.5px solid #ccc; border-radius: 6px;
+    background: #fff; color: #222;
+    transition: background 0.2s, border-color 0.2s;
+    outline: none;
+  }
+  input.cell:focus { border-color: #1a6fc4; background: #eef4ff; }
+
+  /* result cells */
+  .res-cell {
+    width: 72px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1em; font-weight: bold; border-radius: 6px;
+    border: 1.5px solid #27ae60; color: #27ae60; background: #f0faf4;
+    cursor: default;
+    transition: background 0.2s;
+  }
+  .res-cell:hover {
+    background: #27ae60; color: #fff;
+  }
+
+  /* highlight states */
+  input.cell.hl-row {
+    background: #fff3b0; border-color: #c8a000;
+  }
+  input.cell.hl-vec {
+    background: #d6eeff; border-color: #2980b9;
+  }
+
+  /* formula display */
+  .formula-box {
+    margin-top: 24px;
+    min-height: 72px;
+    padding: 14px 28px;
+    background: #fff; border: 1.5px solid #c8a000; border-radius: 10px;
+    font-size: 0.97em; text-align: center; line-height: 2;
+    max-width: 620px; width: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    transition: opacity 0.2s;
+  }
+  .formula-box.empty { opacity: 0.4; font-style: italic; color: #aaa; }
+  .formula-table { border-collapse: collapse; margin: 0 auto; }
+  .formula-table td { padding: 0 6px; line-height: 2; vertical-align: middle; }
+  .formula-table .eq-col { text-align: center; padding: 0 8px; }
+  .formula-table .expr-col { text-align: left; }
+
+  .hint { margin-top: 10px; font-size: 0.85em; color: #999; font-style: italic; }
+
+  .term-pos { color: #c8a000; font-weight: bold; }
+  .term-vec { color: #2980b9; font-weight: bold; }
+  .term-res { color: #27ae60; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<p class="sub">Hover over a result entry to see which products are summed.<br>Edit any value to update live.</p>
+
+<div class="equation">
+
+  <!-- Matrix A (4×3) -->
+  <div class="bracket-wrap">
+    <div class="bracket">(</div>
+    <div class="matrix-grid m4n3" id="matA"></div>
+    <div class="bracket">)</div>
+  </div>
+
+  <div class="op">·</div>
+
+  <!-- Vector v (3×1) -->
+  <div class="bracket-wrap">
+    <div class="bracket">(</div>
+    <div class="matrix-grid m3n1" id="vecV"></div>
+    <div class="bracket">)</div>
+  </div>
+
+  <div class="op">=</div>
+
+  <!-- Result Av (4×1) -->
+  <div class="bracket-wrap">
+    <div class="bracket">(</div>
+    <div class="matrix-grid m4n1" id="vecResult"></div>
+    <div class="bracket">)</div>
+  </div>
+
+</div>
+
+<div class="formula-box empty" id="formulaBox">← Hover over a result entry</div>
+
+<script>
+// Default values
+const A = [
+  [ 1,  2,  0],
+  [ 3,  1, -1],
+  [ 0,  2,  4],
+  [-1,  0,  2]
+];
+const v = [2, 1, -1];
+
+const M = 4, N = 3;
+
+// Build matrix A inputs
+const matA = document.getElementById('matA');
+const aInputs = [];
+for (let i = 0; i < M; i++) {
+  aInputs[i] = [];
+  for (let j = 0; j < N; j++) {
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.className = 'cell';
+    inp.value = A[i][j];
+    inp.dataset.row = i; inp.dataset.col = j;
+    inp.addEventListener('input', updateResult);
+    matA.appendChild(inp);
+    aInputs[i][j] = inp;
+  }
+}
+
+// Build vector v inputs
+const vecV = document.getElementById('vecV');
+const vInputs = [];
+for (let j = 0; j < N; j++) {
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.className = 'cell';
+  inp.value = v[j];
+  inp.dataset.idx = j;
+  inp.addEventListener('input', updateResult);
+  vecV.appendChild(inp);
+  vInputs[j] = inp;
+}
+
+// Build result cells
+const vecResult = document.getElementById('vecResult');
+const resCells = [];
+for (let i = 0; i < M; i++) {
+  const cell = document.createElement('div');
+  cell.className = 'res-cell';
+  cell.dataset.row = i;
+  cell.addEventListener('mouseenter', () => highlightRow(i));
+  cell.addEventListener('mouseleave', clearHighlight);
+  vecResult.appendChild(cell);
+  resCells[i] = cell;
+}
+
+function getA(i, j) { return parseFloat(aInputs[i][j].value) || 0; }
+function getV(j)    { return parseFloat(vInputs[j].value)    || 0; }
+
+function computeRow(i) {
+  let sum = 0;
+  for (let j = 0; j < N; j++) sum += getA(i, j) * getV(j);
+  return sum;
+}
+
+function updateResult() {
+  for (let i = 0; i < M; i++) {
+    const val = computeRow(i);
+    resCells[i].textContent = Number.isInteger(val) ? val : val.toFixed(2);
+  }
+  // refresh formula if hovering
+  if (currentHover >= 0) showFormula(currentHover);
+}
+
+let currentHover = -1;
+
+function highlightRow(i) {
+  currentHover = i;
+  // highlight row i of A
+  for (let r = 0; r < M; r++)
+    for (let c = 0; c < N; c++)
+      aInputs[r][c].classList.toggle('hl-row', r === i);
+  // highlight all of v
+  for (let j = 0; j < N; j++)
+    vInputs[j].classList.add('hl-vec');
+  showFormula(i);
+}
+
+function clearHighlight() {
+  currentHover = -1;
+  for (let r = 0; r < M; r++)
+    for (let c = 0; c < N; c++)
+      aInputs[r][c].classList.remove('hl-row');
+  for (let j = 0; j < N; j++)
+    vInputs[j].classList.remove('hl-vec');
+  const box = document.getElementById('formulaBox');
+  box.innerHTML = '← Hover over a result entry';
+  box.className = 'formula-box empty';
+}
+
+function showFormula(i) {
+  const box = document.getElementById('formulaBox');
+  box.className = 'formula-box';
+
+  // Letter row
+  const letterTerms = [];
+  for (let j = 0; j < N; j++) {
+    const aStr = `<span class="term-pos">a<sub>${i+1}${j+1}</sub></span>`;
+    const vStr = `<span class="term-vec">v<sub>${j+1}</sub></span>`;
+    letterTerms.push(`${aStr}·${vStr}`);
+  }
+
+  // Number row
+  const numTerms = [];
+  for (let j = 0; j < N; j++) {
+    const a = getA(i, j), vj = getV(j);
+    numTerms.push(`<span class="term-pos">${a}</span>·<span class="term-vec">${vj}</span>`);
+  }
+
+  const result = computeRow(i);
+  const resVal = Number.isInteger(result) ? result : result.toFixed(2);
+
+  box.innerHTML = `
+    <table class="formula-table">
+      <tr>
+        <td>Row ${i+1} of <b>A</b>·<b>v</b></td>
+        <td class="eq-col">=</td>
+        <td class="expr-col">${letterTerms.join(' + ')}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td class="eq-col">=</td>
+        <td class="expr-col">${numTerms.join(' + ')}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td class="eq-col">=</td>
+        <td class="expr-col"><span class="term-res">${resVal}</span></td>
+      </tr>
+    </table>`;
+}
+
+updateResult();
+</script>
+</body>
+</html>
