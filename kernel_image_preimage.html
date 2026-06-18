@@ -45,7 +45,7 @@
     font-size: 0.97em; line-height: 1.8;
   }
   .eq-box .eq-title { font-size: 0.83em; font-weight: bold; color: #888; margin-bottom: 4px; }
-  .eq-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .eq-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: nowrap; white-space: nowrap; }
   .eq-lhs { color: #555; min-width: 280px; }
   .eq-rhs { font-weight: bold; }
   .eq-num { color: #1a6fc4; }
@@ -501,8 +501,13 @@ function updateEquations(A){
   } else if(mode==='image'){
     const [x1,x2]=dragX, Ax=mul(A,dragX);
     title = `f(x)`;
-    r1 = `${buildEqLHS(a,b)} &nbsp;= <span class="eq-result">${n(Ax[0])}</span>`;
-    r2 = `${buildEqLHS(c,d)} &nbsp;= <span class="eq-result">${n(Ax[1])}</span>`;
+    function xvalImg(val){ return `<span style="color:#c0392b;font-weight:bold">${fmt2(val)}</span>`; }
+    function buildEqLHSImg(a1,a2,xA,xB){
+      const s2 = fmt2(a2)<0 ? `− ${n(Math.abs(fmt2(a2)))}` : `+ ${n(Math.abs(fmt2(a2)))}`;
+      return `${n(a1)}&thinsp;·&thinsp;${xvalImg(xA)} &nbsp;${s2}&thinsp;·&thinsp;${xvalImg(xB)}`;
+    }
+    r1 = `${buildEqLHSImg(a,b,x1,x2)} &nbsp;= <span class="eq-result">${n(Ax[0])}</span>`;
+    r2 = `${buildEqLHSImg(c,d,x1,x2)} &nbsp;= <span class="eq-result">${n(Ax[1])}</span>`;
     box.style.borderColor='#a3e6bb';
   } else {
     const [y1,y2]=dragY;
@@ -514,8 +519,14 @@ function updateEquations(A){
       r2 = '';
     } else {
       const ey = sol.ySnap || [y1,y2];
-      r1 = `${buildEqLHS(a,b)} &nbsp;= <span class="eq-y">${n(ey[0])}</span>`;
-      r2 = `${buildEqLHS(c,d)} &nbsp;= <span class="eq-y">${n(ey[1])}</span>`;
+      const xv = sol.x0 || [null,null];
+      function xval(i){ return xv[i]!==null ? `<span style="color:#8e44ad;font-weight:bold">${fmt2(xv[i])}</span>` : `<i style="color:#555">x${i===0?'₁':'₂'}</i>`; }
+      function buildEqLHSx(a1,a2){
+        const s2 = fmt2(a2)<0 ? `− ${n(Math.abs(fmt2(a2)))}` : `+ ${n(Math.abs(fmt2(a2)))}`;
+        return `${n(a1)}&thinsp;·&thinsp;${xval(0)} &nbsp;${s2}&thinsp;·&thinsp;${xval(1)}`;
+      }
+      r1 = `${buildEqLHSx(a,b)} &nbsp;= <span class="eq-y">${n(ey[0])}</span>`;
+      r2 = `${buildEqLHSx(c,d)} &nbsp;= <span class="eq-y">${n(ey[1])}</span>`;
     }
   }
 
