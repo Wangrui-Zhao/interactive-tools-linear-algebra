@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Tools for Linear Algebra</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Georgia, serif;
+    background: #fafafa;
+    color: #222;
+    margin: 0;
+    padding: 48px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 {
+    font-size: 1.6em;
+    font-weight: normal;
+    margin: 0 0 8px;
+    text-align: center;
+    color: #222;
+  }
+  .subtitle {
+    font-size: 0.92em;
+    color: #888;
+    font-style: italic;
+    margin: 0 0 48px;
+    text-align: center;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 800px;
+  }
+  a.card {
+    display: block;
+    background: #fff;
+    border: 1.5px solid #ddd;
+    border-radius: 12px;
+    padding: 22px 24px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  a.card:hover {
+    border-color: #aaa;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.10);
+  }
+  .card-title {
+    font-size: 1.02em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #1a1a1a;
+  }
+  .card-desc {
+    font-size: 0.84em;
+    color: #777;
+    line-height: 1.6;
+  }
+  .footer {
+    margin-top: 56px;
+    font-size: 0.82em;
+    color: #bbb;
+  }
+</style>
+</head>
+<body>
+
+
+<div class="grid">
+
+  <a class="card" href="matrix_vector_mult.html">
+    <div class="card-title">Matrix-Vector Multiplication</div>
+    <div class="card-desc">Definition 4.9</div>
+  </a>
+
+  <a class="card" href="matrix_notation.html">
+    <div class="card-title">Matrix Notation</div>
+    <div class="card-desc">Notation 2.22</div>
+  </a>
+
+  <a class="card" href="dim_sum_intersection.html">
+    <div class="card-title">Dimensions of Sums and Intersections</div>
+    <div class="card-desc">Theorem 3.77</div>
+  </a>
+
+  <a class="card" href="kernel_image_preimage.html">
+    <div class="card-title">Kernel · Image · Preimage</div>
+    <div class="card-desc">Definition 4.20 · Definition 4.22</div>
+  </a>
+
+</div>
+
+
+</body>
+</html>
