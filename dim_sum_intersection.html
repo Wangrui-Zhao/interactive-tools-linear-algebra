@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dimensions of Sums and Intersections</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Georgia, serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 16px; background: #fafafa; color: #222;
+  }
+  h2 { margin-bottom: 4px; text-align: center; }
+  p.sub { color: #555; margin: 0 0 18px; font-style: italic; font-size: 0.93em; text-align: center; }
+
+  .tabs {
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px;
+  }
+  .tab {
+    padding: 7px 13px; border-radius: 8px; border: 1.5px solid #bbb;
+    background: #fff; cursor: pointer; font-size: 0.87em; font-family: Georgia, serif;
+    transition: background 0.15s;
+  }
+  .tab.active { background: #1a6fc4; color: #fff; border-color: #1a6fc4; }
+
+  .main { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+
+  canvas {
+    background: #fff; border: 1.5px solid #ccc; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+
+  .side {
+    display: flex; flex-direction: column; gap: 14px; max-width: 260px; min-width: 220px;
+  }
+
+  /* formula card */
+  .formula-card {
+    background: #fff; border: 2px solid #1a6fc4; border-radius: 12px;
+    padding: 16px 18px; text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  }
+  .formula-card .title { font-size: 0.82em; color: #888; margin-bottom: 8px; }
+  .formula-line {
+    font-size: 0.88em; line-height: 2.2;
+  }
+  .dimA { color: #c0392b; font-weight: bold; }
+  .dimB { color: #2980b9; font-weight: bold; }
+  .dimI { color: #8e44ad; font-weight: bold; }
+  .dimS { color: #27ae60; font-weight: bold; }
+  .num  { font-size: 1.3em; font-weight: bold; }
+
+  /* info cards */
+  .info-card {
+    min-height: 62px;
+    background: #fff; border: 1.5px solid #ddd; border-radius: 10px;
+    padding: 12px 14px; font-size: 0.9em; line-height: 1.7;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+  }
+  .info-card .label { font-weight: bold; margin-bottom: 4px; font-size: 0.85em; color: #555; }
+
+  /* slider */
+  .slider-wrap {
+    background: #fff; border: 1.5px solid #ddd; border-radius: 10px;
+    padding: 12px 14px; font-size: 0.9em;
+  }
+  .slider-wrap label { display: block; margin-bottom: 6px; font-weight: bold; }
+  input[type=range] { width: 100%; accent-color: #2980b9; }
+  .angle-val { text-align: center; color: #2980b9; font-weight: bold; margin-top: 4px; }
+
+  .insight {
+    min-height: 80px;
+    background: #fffbea; border: 1.5px solid #f0c040; border-radius: 10px;
+    padding: 10px 14px; font-size: 0.88em; line-height: 1.6; color: #555;
+  }
+</style>
+</head>
+<body>
+
+
+<div class="tabs">
+  <button class="tab active" onclick="setCase(0)">Two lines in ℝ²</button>
+  <button class="tab"        onclick="setCase(1)">Line + Plane in ℝ³</button>
+  <button class="tab"        onclick="setCase(2)">Two planes in ℝ³</button>
+</div>
+
+<div class="main">
+  <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+    <canvas id="c" width="420" height="420"></canvas>
+    <div id="formulaBelow" style="text-align:center; font-size:1.05em; line-height:2.2;">
+      <span class="dimS">dim(A+B)</span> = <span class="dimA">dim A</span> + <span class="dimB">dim B</span> − <span class="dimI">dim(A∩B)</span>
+      <br>
+      <span class="dimS num" id="nS">2</span> =
+      <span class="dimA num" id="nA">1</span> +
+      <span class="dimB num" id="nB">1</span> −
+      <span class="dimI num" id="nI">0</span>
+    </div>
+  </div>
+
+  <div class="side">
+
+    <!-- slider — above info-cards so insight text can't push it -->
+    <div class="slider-wrap" id="sliderWrap" style="visibility:hidden">
+      <label id="sliderLabel">Angle of B (θ)</label>
+      <input type="range" id="angleSlider" min="0" max="180" value="90" step="1">
+      <div class="angle-val" id="angleVal">θ = 90°</div>
+    </div>
+
+    <!-- descriptions -->
+    <div class="info-card">
+      <div class="label">Subspaces</div>
+      <div id="descA" style="color:#c0392b"></div>
+      <div id="descB" style="color:#2980b9"></div>
+    </div>
+
+    <div class="info-card">
+      <div class="label">Intersection A ∩ B</div>
+      <div id="descI" style="color:#8e44ad"></div>
+    </div>
+
+    <div class="info-card">
+      <div class="label">Sum A + B</div>
+      <div id="descS" style="color:#27ae60"></div>
+    </div>
+
+    <div class="insight" id="insight"></div>
+
+  </div>
+</div>
+
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const dpr = window.devicePixelRatio || 1;
+const W = canvas.width, H = canvas.height;
+canvas.width = W*dpr; canvas.height = H*dpr;
+canvas.style.width = W+'px'; canvas.style.height = H+'px';
+ctx.scale(dpr, dpr);
+
+const cx = W/2, cy = H/2, S = 48, R = 4;
+
+function toC(x,y){ return [cx+x*S, cy-y*S]; }
+
+let caseIdx = 0;
+let angle = 90; // degrees, for case 0
+
+// ── helpers ──
+function line(x0,y0,x1,y1,color,lw,dash){
+  const [px0,py0]=toC(x0,y0),[px1,py1]=toC(x1,y1);
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=lw||2;
+  if(dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
+  ctx.restore();
+}
+
+function fillHalfPlane(nx,ny,color){
+  // shade half-plane with normal (nx,ny) on positive side
+  ctx.save();
+  ctx.fillStyle=color;
+  // just shade entire canvas then clip – easier: draw a big rect
+  ctx.fillRect(0,0,W,H);
+  ctx.restore();
+}
+
+function arrow(x0,y0,x1,y1,color,lw){
+  const [px0,py0]=toC(x0,y0),[px1,py1]=toC(x1,y1);
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw||2.5;
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
+  const a=Math.atan2(py1-py0,px1-px0);
+  ctx.beginPath();
+  ctx.moveTo(px1,py1);
+  ctx.lineTo(px1-10*Math.cos(a-0.35),py1-10*Math.sin(a-0.35));
+  ctx.lineTo(px1-10*Math.cos(a+0.35),py1-10*Math.sin(a+0.35));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function label(x,y,txt,color,size){
+  const [px,py]=toC(x,y);
+  ctx.save(); ctx.fillStyle=color; ctx.font=(size||'bold 13px')+' Georgia';
+  ctx.fillText(txt,px+6,py-6); ctx.restore();
+}
+
+function drawAxes(){
+  ctx.save(); ctx.strokeStyle='#ccc'; ctx.lineWidth=1;
+  for(let v=-R;v<=R;v++){
+    const [gx]=toC(v,0),[,gy]=toC(0,v);
+    ctx.setLineDash([2,4]);
+    ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
+  }
+  ctx.restore();
+  arrow(-R,0,R+0.4,0,'#aaa',1.5);
+  arrow(0,-R,0,R+0.4,'#aaa',1.5);
+  ctx.save(); ctx.font='italic 12px Georgia'; ctx.fillStyle='#aaa';
+  const [axX]=toC(R+0.5,0);const [,axY]=toC(0,R+0.5);
+  ctx.fillText('x₁',axX-4,cy+14); ctx.fillText('x₂',cx-16,axY+6);
+  ctx.restore();
+}
+
+function drawLineThroughOrigin(angleDeg, color, lbl, lw){
+  const a = angleDeg * Math.PI / 180;
+  const dx = Math.cos(a)*R, dy = Math.sin(a)*R;
+  line(-dx,-dy, dx,dy, color, lw||3);
+  // label at positive end
+  const [px,py]=toC(dx*0.8, dy*0.8);
+  ctx.save(); ctx.font='bold 14px Georgia'; ctx.fillStyle=color;
+  ctx.fillText(lbl, px+6, py-6); ctx.restore();
+}
+
+// shade line (region near it)
+function shadeLine(angleDeg, color){
+  const a = angleDeg*Math.PI/180;
+  const dx=Math.cos(a),dy=Math.sin(a);
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=12; ctx.globalAlpha=0.15;
+  ctx.setLineDash([]);
+  const [px0,py0]=toC(-dx*R,-dy*R),[px1,py1]=toC(dx*R,dy*R);
+  ctx.beginPath(); ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
+  ctx.restore();
+}
+
+function dot(x,y,color,r){
+  const [px,py]=toC(x,y);
+  ctx.save(); ctx.fillStyle=color;
+  ctx.beginPath(); ctx.arc(px,py,r||7,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+  ctx.restore();
+}
+
+// draw a semi-transparent green box suggesting ℝ³ is fully spanned
+function drawR3Volume(p3fn, ext){
+  const e = ext * 0.85;
+  // 8 corners of a cube: (±e, ±e, ±e)
+  const c = (x,y,z) => p3fn(x,y,z);
+  // faces: bottom, top, front-x, back-x, front-y, back-y
+  const faces = [
+    [c(-e,-e,-e),c( e,-e,-e),c( e, e,-e),c(-e, e,-e)],
+    [c(-e,-e, e),c( e,-e, e),c( e, e, e),c(-e, e, e)],
+    [c(-e,-e,-e),c( e,-e,-e),c( e,-e, e),c(-e,-e, e)],
+    [c(-e, e,-e),c( e, e,-e),c( e, e, e),c(-e, e, e)],
+    [c(-e,-e,-e),c(-e, e,-e),c(-e, e, e),c(-e,-e, e)],
+    [c( e,-e,-e),c( e, e,-e),c( e, e, e),c( e,-e, e)],
+  ];
+  ctx.save();
+  faces.forEach(pts => {
+    ctx.fillStyle = 'rgba(39,174,96,0.07)';
+    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    pts.forEach(p => ctx.lineTo(p[0],p[1]));
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(39,174,96,0.25)';
+    ctx.lineWidth = 1; ctx.setLineDash([3,4]);
+    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    pts.forEach(p => ctx.lineTo(p[0],p[1]));
+    ctx.closePath(); ctx.stroke();
+  });
+  ctx.restore();
+}
+
+// ── cases ──
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(caseIdx===0) drawAxes(); // 2D axes only for case 0
+
+  if(caseIdx===0){
+    const a = angle;
+    const isParallel = (a===0||a===180);
+    const isOpp = (a===180);
+
+    // shade A (horizontal, 0°)
+    shadeLine(0,'#c0392b');
+    // shade B (angle θ)
+    shadeLine(a,'#2980b9');
+
+    if(isParallel){
+      // same line → intersection = whole line, sum = line
+      drawLineThroughOrigin(0,'#8e44ad','',3.5);
+      // labels inside canvas
+      ctx.save(); ctx.font='bold 13px Georgia';
+      ctx.fillStyle='#8e44ad';
+      const [lx1,ly1]=toC(1.5,0); ctx.fillText('A = B = A∩B',lx1,ly1-14);
+      ctx.fillStyle='#27ae60';
+      const [lx2,ly2]=toC(-1.5,0); ctx.fillText('A+B = A',lx2,ly2+22);
+      ctx.restore();
+
+      set('nA','1'); set('nB','1'); set('nI','1'); set('nS','1');
+      set('descA','A = x-axis (dim 1)');
+      set('descB','B = x-axis (dim 1) — same as A');
+      set('descI','A ∩ B = x-axis (dim 1)');
+      set('descS','A + B = x-axis (dim 1)');
+      set('insight','⚠️ A+B is <b>not as large as possible</b> (dim 2) because A∩B is <b>not as small as possible</b> ({0}). The overlap "eats into" the sum.');
+    } else {
+      drawLineThroughOrigin(0,'#c0392b','A',3);
+      drawLineThroughOrigin(a,'#2980b9','B',3);
+      // intersection = {0}
+      dot(0,0,'#8e44ad',8);
+      ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#8e44ad';
+      const [ox,oy]=toC(0,0); ctx.fillText('A∩B={0}',ox+10,oy-10); ctx.restore();
+      // shade sum = whole plane
+      ctx.save(); ctx.fillStyle='rgba(39,174,96,0.06)'; ctx.fillRect(0,0,W,H); ctx.restore();
+      ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
+      ctx.fillText('A+B = ℝ²',10,20); ctx.restore();
+
+      set('nA','1'); set('nB','1'); set('nI','0'); set('nS','2');
+      set('descA','A = line at 0° (dim 1)');
+      set('descB',`B = line at ${a}° (dim 1)`);
+      set('descI','A ∩ B = {0} (dim 0)');
+      set('descS','A + B = ℝ² (dim 2)');
+      set('insight','✓ A+B is <b>as large as possible</b> (1+1=2) because A∩B is <b>as small as possible</b> ({0}). This is a direct sum: A ⊕ B = ℝ².');
+    }
+    document.getElementById('sliderWrap').style.visibility='visible';
+
+  } else if(caseIdx===1){
+    // Line (z-axis) + xy-plane in R³ — proper 3D isometric view
+    const S3 = 46, Sz3 = S3*0.52, ZA3 = Math.PI/5;
+    const ocx = W/2 - 20, ocy = H/2 + 30;
+    function p3b(x,y,z){
+      return [ocx + x*S3 + z*Sz3*Math.cos(ZA3),
+              ocy - y*S3 - z*Sz3*Math.sin(ZA3)];
+    }
+    function fillPoly1(pts, color){
+      ctx.save(); ctx.fillStyle=color;
+      ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+      for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0],pts[k][1]);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    function strokePoly1(pts, color, lw, dash){
+      ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=lw||1.5;
+      if(dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+      for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0],pts[k][1]);
+      ctx.closePath(); ctx.stroke(); ctx.restore();
+    }
+    function line3b(x0,y0,z0,x1,y1,z1,color,lw,dash){
+      const [px0,py0]=p3b(x0,y0,z0),[px1,py1]=p3b(x1,y1,z1);
+      ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=lw||2;
+      if(dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
+      ctx.restore();
+    }
+    function arrow3b(x0,y0,z0,x1,y1,z1,color,lw){
+      const [px0,py0]=p3b(x0,y0,z0),[px1,py1]=p3b(x1,y1,z1);
+      ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw||1.8;
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
+      const a=Math.atan2(py1-py0,px1-px0);
+      ctx.beginPath(); ctx.moveTo(px1,py1);
+      ctx.lineTo(px1-9*Math.cos(a-0.35),py1-9*Math.sin(a-0.35));
+      ctx.lineTo(px1-9*Math.cos(a+0.35),py1-9*Math.sin(a+0.35));
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+
+    // angle: 0° = z-axis (perpendicular to plane), 90° = line lies in plane
+    const θ1 = angle * Math.PI / 180;
+    const inPlane = angle >= 88;
+    const ext1 = 3.2;
+    const dy1 = Math.sin(θ1), dz1 = Math.cos(θ1);
+
+    // green volume hint when A+B = ℝ³
+    if(!inPlane) drawR3Volume(p3b, ext1);
+
+    // xy-plane (B)
+    const B1_pts = [p3b(-ext1,-ext1,0),p3b(ext1,-ext1,0),p3b(ext1,ext1,0),p3b(-ext1,ext1,0)];
+    fillPoly1(B1_pts,'rgba(41,128,185,0.15)');
+    strokePoly1(B1_pts,'rgba(41,128,185,0.5)',1.5,[4,4]);
+
+    // coordinate axes
+    arrow3b(-ext1,0,0,ext1+0.4,0,0,'#aaa',1.5);
+    arrow3b(0,-ext1,0,0,ext1+0.4,0,'#aaa',1.5);
+    arrow3b(0,0,-ext1,0,0,ext1+0.4,'#aaa',1.5);
+    ctx.save(); ctx.font='italic bold 12px Georgia'; ctx.fillStyle='#aaa';
+    const [axX1,axY1]=p3b(ext1+0.5,0,0); ctx.fillText('x',axX1,axY1+4);
+    const [ayX1,ayY1]=p3b(0,ext1+0.5,0); ctx.fillText('y',ayX1+4,ayY1);
+    const [azX1,azY1]=p3b(0,0,ext1+0.5); ctx.fillText('z',azX1+4,azY1); ctx.restore();
+
+    // line A
+    const lineCol1 = inPlane ? '#8e44ad' : '#c0392b';
+    line3b(0,-ext1*dy1,-ext1*dz1, 0,ext1*dy1,ext1*dz1, lineCol1, 3.5);
+
+    // B label
+    ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#2980b9';
+    const [blx1,bly1]=p3b(ext1*0.55,ext1*0.55,0); ctx.fillText('B = xy-plane',blx1,bly1-8);
+    ctx.restore();
+
+    if(inPlane){
+      ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#8e44ad';
+      const [ilx,ily]=p3b(0,ext1*0.55*dy1,ext1*0.55*dz1);
+      ctx.fillText('A = A∩B',ilx+6,ily-8); ctx.restore();
+      ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
+      ctx.fillText('A+B = xy-plane (dim 2)',10,20); ctx.restore();
+      set('nA','1'); set('nB','2'); set('nI','1'); set('nS','2');
+      set('descA','A = line lying in xy-plane (dim 1)');
+      set('descB','B = xy-plane (dim 2)');
+      set('descI','A ∩ B = line A itself (dim 1)');
+      set('descS','A + B = xy-plane (dim 2)');
+      set('insight','⚠️ 1 + 2 − 1 = 2. The line lies <em>inside</em> the plane — it adds no new direction. A+B collapses to just the plane.');
+    } else {
+      const [ox1,oy1]=p3b(0,0,0);
+      ctx.save(); ctx.fillStyle='#8e44ad';
+      ctx.beginPath(); ctx.arc(ox1,oy1,8,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#c0392b';
+      const [alx1,aly1]=p3b(0,ext1*0.55*dy1,ext1*0.55*dz1); ctx.fillText('A',alx1+6,aly1-8);
+      ctx.fillStyle='#8e44ad'; ctx.fillText('A∩B={0}',ox1+10,oy1-12); ctx.restore();
+      ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
+      ctx.fillText('A+B = ℝ³ (dim 3)',10,20); ctx.restore();
+      set('nA','1'); set('nB','2'); set('nI','0'); set('nS','3');
+      set('descA',`A = line at ${angle}° from z-axis (dim 1)`);
+      set('descB','B = xy-plane (dim 2)');
+      set('descI','A ∩ B = {0} (dim 0)');
+      set('descS','A + B = ℝ³ (dim 3)');
+      set('insight','✓ 1 + 2 − 0 = 3. The line only meets the plane at origin → spans all of ℝ³. Drag θ → 90° to see the line fall into the plane.');
+    }
+    document.getElementById('sliderWrap').style.visibility='visible';
+
+  } else if(caseIdx===2){
+    // Two planes in R³ — proper isometric 3D view
+    // A = xy-plane, B = plane containing x-axis, tilted by angle θ around x-axis
+    const θ = angle * Math.PI / 180;
+    const isParallel = (angle === 0 || angle === 180);
+
+    // 3D projection params (oblique)
+    const S3 = 46, Sz3 = S3*0.52, ZA3 = Math.PI/5;
+    const ocx = W/2 - 20, ocy = H/2 + 30;
+    function p3(x,y,z){
+      return [ocx + x*S3 + z*Sz3*Math.cos(ZA3),
+              ocy - y*S3 - z*Sz3*Math.sin(ZA3)];
+    }
+    function fillPoly(pts, color){
+      ctx.save(); ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0],pts[k][1]);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    function strokePoly(pts, color, lw, dash){
+      ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=lw||1.5;
+      if(dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0],pts[0][1]);
+      for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0],pts[k][1]);
+      ctx.closePath(); ctx.stroke(); ctx.restore();
+    }
+    function line3(x0,y0,z0,x1,y1,z1,color,lw,dash){
+      const [px0,py0]=p3(x0,y0,z0),[px1,py1]=p3(x1,y1,z1);
+      ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=lw||2;
+      if(dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
+      ctx.restore();
+    }
+    function arrow3(x0,y0,z0,x1,y1,z1,color,lw){
+      const [px0,py0]=p3(x0,y0,z0),[px1,py1]=p3(x1,y1,z1);
+      ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw||1.8;
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
+      const a=Math.atan2(py1-py0,px1-px0);
+      ctx.beginPath();
+      ctx.moveTo(px1,py1);
+      ctx.lineTo(px1-9*Math.cos(a-0.35),py1-9*Math.sin(a-0.35));
+      ctx.lineTo(px1-9*Math.cos(a+0.35),py1-9*Math.sin(a+0.35));
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+
+    const ext = 3.2; // plane extent
+
+    // green volume hint when A+B = ℝ³
+    if(!isParallel) drawR3Volume(p3, ext);
+
+    // Plane A corners (xy-plane, z=0)
+    const A_pts = [p3(-ext,-ext,0),p3(ext,-ext,0),p3(ext,ext,0),p3(-ext,ext,0)];
+    // Plane B corners: tilted θ around x-axis → y→y·cosθ, z→y·sinθ
+    const B_pts = [
+      p3(-ext,-ext*Math.cos(θ),-ext*Math.sin(θ)),
+      p3( ext,-ext*Math.cos(θ),-ext*Math.sin(θ)),
+      p3( ext, ext*Math.cos(θ), ext*Math.sin(θ)),
+      p3(-ext, ext*Math.cos(θ), ext*Math.sin(θ))
+    ];
+
+    if(isParallel){
+      // same plane → draw as one merged plane
+      fillPoly(A_pts,'rgba(150,100,200,0.25)');
+      strokePoly(A_pts,'#8e44ad',2);
+      // axes
+      arrow3(-ext,0,0,ext+0.3,0,0,'#aaa',1.5);
+      arrow3(0,-ext,0,0,ext+0.3,0,'#aaa',1.5);
+      arrow3(0,0,-ext,0,0,ext+0.3,'#aaa',1.5);
+      ctx.save(); ctx.font='italic bold 12px Georgia'; ctx.fillStyle='#aaa';
+      const [axX,axY]=p3(ext+0.5,0,0); ctx.fillText('x',axX,axY+4);
+      const [ayX,ayY]=p3(0,ext+0.5,0); ctx.fillText('y',ayX+4,ayY);
+      const [azX,azY]=p3(0,0,ext+0.5); ctx.fillText('z',azX+4,azY); ctx.restore();
+      // label
+      ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#8e44ad';
+      const [lx,ly]=p3(ext*0.7,ext*0.7,0); ctx.fillText('A = B',lx,ly-8); ctx.restore();
+
+      set('nA','2'); set('nB','2'); set('nI','2'); set('nS','2');
+      set('descA','A = xy-plane (dim 2)');
+      set('descB','B = xy-plane (same plane, dim 2)');
+      set('descI','A ∩ B = xy-plane (dim 2)');
+      set('descS','A + B = xy-plane (dim 2)');
+      set('insight','⚠️ When A = B, the intersection is maximal and the sum collapses: 2+2−2 = 2. No new direction is added — B contributes nothing new to A.');
+    } else {
+      // draw plane A (back half first for depth)
+      fillPoly(A_pts,'rgba(192,57,43,0.13)');
+      strokePoly(A_pts,'rgba(192,57,43,0.5)',1.5,[4,4]);
+      // draw plane B
+      fillPoly(B_pts,'rgba(41,128,185,0.13)');
+      strokePoly(B_pts,'rgba(41,128,185,0.5)',1.5,[4,4]);
+      // axes
+      arrow3(-ext,0,0,ext+0.3,0,0,'#aaa',1.5);
+      arrow3(0,-ext,0,0,ext+0.3,0,'#aaa',1.5);
+      arrow3(0,0,-ext,0,0,ext+0.3,'#aaa',1.5);
+      ctx.save(); ctx.font='italic bold 12px Georgia'; ctx.fillStyle='#aaa';
+      const [axX,axY]=p3(ext+0.5,0,0); ctx.fillText('x',axX,axY+4);
+      const [ayX,ayY]=p3(0,ext+0.5,0); ctx.fillText('y',ayX+4,ayY);
+      const [azX,azY]=p3(0,0,ext+0.5); ctx.fillText('z',azX+4,azY); ctx.restore();
+      // intersection: x-axis (highlighted)
+      line3(-ext,0,0,ext,0,0,'#8e44ad',3.5);
+      // labels
+      ctx.save(); ctx.font='bold 12px Georgia';
+      ctx.fillStyle='#c0392b';
+      const [alx,aly]=p3(-ext*0.5, ext*0.7,0); ctx.fillText('A (xy-plane)',alx,aly);
+      ctx.fillStyle='#2980b9';
+      const [blx,bly]=p3(-ext*0.4, ext*0.6*Math.cos(θ), ext*0.6*Math.sin(θ));
+      ctx.fillText('B (tilted plane)',blx,bly-10);
+      ctx.fillStyle='#8e44ad';
+      const [ilx,ily]=p3(ext*0.6,0,0); ctx.fillText('A∩B = x-axis',ilx+4,ily-10);
+      ctx.restore();
+      // sum label
+      ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
+      ctx.fillText('A+B = ℝ³',10,20); ctx.restore();
+
+      set('nA','2'); set('nB','2'); set('nI','1'); set('nS','3');
+      set('descA','A = xy-plane (dim 2)');
+      set('descB',`B = plane tilted ${angle}° around x-axis (dim 2)`);
+      set('descI','A ∩ B = x-axis (dim 1)');
+      set('descS','A + B = ℝ³ (dim 3)');
+      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³. Drag θ → 0° to see what happens when the planes coincide.`);
+    }
+    document.getElementById('sliderWrap').style.visibility='visible';
+    document.getElementById('sliderLabel').textContent='Tilt angle θ of plane B';
+  }
+}
+
+function set(id,html){ document.getElementById(id).innerHTML=html; }
+
+document.getElementById('angleSlider').addEventListener('input',e=>{
+  angle=parseInt(e.target.value);
+  document.getElementById('angleVal').textContent=`θ = ${angle}°`;
+  draw();
+});
+
+function setCase(ci){
+  caseIdx=ci;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===ci));
+  if(ci===0){
+    angle=90;
+    document.getElementById('angleSlider').min=0;
+    document.getElementById('angleSlider').max=180;
+    document.getElementById('angleSlider').value=90;
+    document.getElementById('angleVal').textContent='θ = 90°';
+    document.getElementById('sliderWrap').style.visibility='visible';
+    document.getElementById('sliderLabel').textContent='Angle of B (θ)';
+  } else if(ci===1){
+    angle=0;
+    document.getElementById('angleSlider').min=0;
+    document.getElementById('angleSlider').max=90;
+    document.getElementById('angleSlider').value=0;
+    document.getElementById('angleVal').textContent='θ = 0°';
+    document.getElementById('sliderWrap').style.visibility='visible';
+    document.getElementById('sliderLabel').textContent='Tilt from z-axis (θ) — 90° = line in plane';
+  } else if(ci===2){
+    angle=90;
+    document.getElementById('angleSlider').min=0;
+    document.getElementById('angleSlider').max=180;
+    document.getElementById('angleSlider').value=90;
+    document.getElementById('angleVal').textContent='θ = 90°';
+    document.getElementById('sliderWrap').style.visibility='visible';
+  }
+  draw();
+}
+
+draw();
+</script>
+</body>
+</html>
