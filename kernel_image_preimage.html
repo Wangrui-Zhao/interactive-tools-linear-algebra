@@ -339,10 +339,17 @@ function drawImageMode(A,id){
   else if(id) fillSubspace(CX_R,'rgba(39,174,96,0.55)',id);
 
   // Arrow x → Ax
-  drawCurvedArrow(x[0],x[1],Ax[0],Ax[1],'rgba(80,80,200,0.65)');
+  const AxInRange=Math.abs(Ax[0])<=RANGE+0.1&&Math.abs(Ax[1])<=RANGE+0.1;
+  if(AxInRange) drawCurvedArrow(x[0],x[1],Ax[0],Ax[1],'rgba(80,80,200,0.65)');
 
   drawPt(CX_L,x[0],x[1],'#c0392b',8,'x');
+  ctx.save(); clipToSide(CX_R);
   drawPt(CX_R,Ax[0],Ax[1],'#27ae60',8,'f(x)');
+  ctx.restore();
+  if(!AxInRange){
+    ctx.save(); ctx.fillStyle='#27ae60'; ctx.font='italic 12px Georgia'; ctx.textAlign='center';
+    ctx.fillText('f(x) outside view', CX_R, CY); ctx.restore();
+  }
 }
 
 function drawPreimageMode(A,kd,id){
@@ -364,8 +371,15 @@ function drawPreimageMode(A,kd,id){
     ctx.restore();
   } else if(sol.type==='point'){
     const x0=sol.x0;
-    drawCurvedArrow(x0[0],x0[1],y[0],y[1],'rgba(80,80,200,0.6)');
+    const inRange=Math.abs(x0[0])<=RANGE+0.1&&Math.abs(x0[1])<=RANGE+0.1;
+    if(inRange) drawCurvedArrow(x0[0],x0[1],y[0],y[1],'rgba(80,80,200,0.6)');
+    ctx.save(); clipToSide(CX_L);
     drawPt(CX_L,x0[0],x0[1],'#8e44ad',8,'f⁻¹(y)',[10,-4]);
+    ctx.restore();
+    if(!inRange){
+      ctx.save(); ctx.fillStyle='#8e44ad'; ctx.font='italic 12px Georgia'; ctx.textAlign='center';
+      ctx.fillText('f⁻¹(y) outside view', CX_L, CY); ctx.restore();
+    }
   } else if(sol.type==='line'){
     const {x0,dir}=sol;
     // kernel line (faint yellow reference)
