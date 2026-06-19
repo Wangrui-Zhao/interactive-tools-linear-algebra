@@ -325,9 +325,7 @@ function drawKernelMode(A,kd,id){
     drawCurvedArrow(0,0,0,0,'rgba(180,180,180,0.5)');
   }
 
-  // Codomain: origin highlighted, image shown faintly
-  if(id==='plane') fillSubspace(CX_R,'rgba(39,174,96,0.1)','plane');
-  else if(id) fillSubspace(CX_R,'rgba(39,174,96,0.25)',id);
+  // Codomain: origin only
   drawPt(CX_R,0,0,'#2980b9',10,'0',[10,-4]);
 }
 
