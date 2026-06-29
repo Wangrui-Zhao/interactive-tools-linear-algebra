@@ -29,29 +29,36 @@
   canvas {
     background: #fff; border: 1.5px solid #ccc; border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    cursor: grab;
+    max-width: 100%;
+  }
+  canvas:active { cursor: grabbing; }
+
+  @media (max-width: 520px) {
+    body { padding: 16px 10px; }
+    .main { gap: 14px; }
+    .side { max-width: 100%; min-width: 0; width: 100%; }
+    .tabs { gap: 5px; }
+    .tab { padding: 6px 10px; font-size: 0.82em; }
   }
 
   .side {
     display: flex; flex-direction: column; gap: 14px; max-width: 260px; min-width: 220px;
   }
 
-  /* formula card */
   .formula-card {
     background: #fff; border: 2px solid #1a6fc4; border-radius: 12px;
     padding: 16px 18px; text-align: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   }
   .formula-card .title { font-size: 0.82em; color: #888; margin-bottom: 8px; }
-  .formula-line {
-    font-size: 0.88em; line-height: 2.2;
-  }
+  .formula-line { font-size: 0.88em; line-height: 2.2; }
   .dimA { color: #c0392b; font-weight: bold; }
   .dimB { color: #2980b9; font-weight: bold; }
   .dimI { color: #8e44ad; font-weight: bold; }
   .dimS { color: #27ae60; font-weight: bold; }
   .num  { font-size: 1.3em; font-weight: bold; }
 
-  /* info cards */
   .info-card {
     min-height: 62px;
     background: #fff; border: 1.5px solid #ddd; border-radius: 10px;
@@ -60,7 +67,6 @@
   }
   .info-card .label { font-weight: bold; margin-bottom: 4px; font-size: 0.85em; color: #555; }
 
-  /* slider */
   .slider-wrap {
     background: #fff; border: 1.5px solid #ddd; border-radius: 10px;
     padding: 12px 14px; font-size: 0.9em;
@@ -77,7 +83,6 @@
 </style>
 </head>
 <body>
-
 
 <div class="tabs">
   <button class="tab active" onclick="setCase(0)">Two lines in ℝ²</button>
@@ -99,15 +104,12 @@
   </div>
 
   <div class="side">
-
-    <!-- slider — above info-cards so insight text can't push it -->
     <div class="slider-wrap" id="sliderWrap" style="visibility:hidden">
       <label id="sliderLabel">Tilt angle θ of line B</label>
       <input type="range" id="angleSlider" min="0" max="180" value="90" step="1">
       <div class="angle-val" id="angleVal">θ = 90°</div>
     </div>
 
-    <!-- descriptions -->
     <div class="info-card">
       <div class="label">Subspaces</div>
       <div id="descA" style="color:#c0392b"></div>
@@ -125,10 +127,8 @@
     </div>
 
     <div class="insight" id="insight"></div>
-
   </div>
 </div>
-
 
 <script>
 const canvas = document.getElementById('c');
@@ -144,7 +144,7 @@ const cx = W/2, cy = H/2, S = 48, R = 4;
 function toC(x,y){ return [cx+x*S, cy-y*S]; }
 
 let caseIdx = 0;
-let angle = 90; // degrees, for case 0
+let angle = 90;
 
 // ── helpers ──
 function line(x0,y0,x1,y1,color,lw,dash){
@@ -152,15 +152,6 @@ function line(x0,y0,x1,y1,color,lw,dash){
   ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=lw||2;
   if(dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(px0,py0); ctx.lineTo(px1,py1); ctx.stroke();
-  ctx.restore();
-}
-
-function fillHalfPlane(nx,ny,color){
-  // shade half-plane with normal (nx,ny) on positive side
-  ctx.save();
-  ctx.fillStyle=color;
-  // just shade entire canvas then clip – easier: draw a big rect
-  ctx.fillRect(0,0,W,H);
   ctx.restore();
 }
 
@@ -205,13 +196,18 @@ function drawLineThroughOrigin(angleDeg, color, lbl, lw){
   const a = angleDeg * Math.PI / 180;
   const dx = Math.cos(a)*R, dy = Math.sin(a)*R;
   line(-dx,-dy, dx,dy, color, lw||3);
-  // label at positive end
-  const [px,py]=toC(dx*0.8, dy*0.8);
-  ctx.save(); ctx.font='bold 14px Georgia'; ctx.fillStyle=color;
-  ctx.fillText(lbl, px+6, py-6); ctx.restore();
+  if(lbl){
+    const [px,py]=toC(dx*0.8, dy*0.8);
+    const tcx=px-cx, tcy=py-cy;
+    const len=Math.sqrt(tcx*tcx+tcy*tcy)||1;
+    const offX=tcx/len*14+4, offY=tcy/len*14;
+    ctx.save(); ctx.font='bold 14px Georgia'; ctx.fillStyle=color;
+    ctx.textBaseline='middle';
+    ctx.textAlign=offX>=0?'left':'right';
+    ctx.fillText(lbl, px+offX, py+offY); ctx.restore();
+  }
 }
 
-// shade line (region near it)
 function shadeLine(angleDeg, color){
   const a = angleDeg*Math.PI/180;
   const dx=Math.cos(a),dy=Math.sin(a);
@@ -231,12 +227,9 @@ function dot(x,y,color,r){
   ctx.restore();
 }
 
-// draw a semi-transparent green box suggesting ℝ³ is fully spanned
 function drawR3Volume(p3fn, ext){
   const e = ext * 0.85;
-  // 8 corners of a cube: (±e, ±e, ±e)
   const c = (x,y,z) => p3fn(x,y,z);
-  // faces: bottom, top, front-x, back-x, front-y, back-y
   const faces = [
     [c(-e,-e,-e),c( e,-e,-e),c( e, e,-e),c(-e, e,-e)],
     [c(-e,-e, e),c( e,-e, e),c( e, e, e),c(-e, e, e)],
@@ -260,31 +253,46 @@ function drawR3Volume(p3fn, ext){
   ctx.restore();
 }
 
+// ── Handle helper ──────────────────────────────────────────────────────────
+// Label is always offset outward from the canvas centre so it never lands on
+// an axis regardless of which angle or which case we're in.
+function drawHandle(px, py, lbl, color){
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font='bold 11px Georgia'; ctx.fillStyle=color;
+  const tcx=px-cx, tcy=py-cy;
+  const len=Math.sqrt(tcx*tcx+tcy*tcy)||1;
+  // +5 rightward bias so a perfectly vertical line still puts text to the right
+  const lx=tcx/len*14+5, ly=tcy/len*14;
+  ctx.textAlign=lx>=0?'left':'right';
+  ctx.textBaseline='middle';
+  ctx.fillText(lbl, px+lx, py+ly);
+  ctx.restore();
+}
+
 // ── cases ──
 function draw(){
   ctx.clearRect(0,0,W,H);
-  if(caseIdx===0) drawAxes(); // 2D axes only for case 0
+  if(caseIdx===0) drawAxes();
 
   if(caseIdx===0){
     const a = angle;
-    const isParallel = (a===0||a===180);
-    const isOpp = (a===180);
+    const aInt = Math.round(a);
+    const isParallel = (aInt===0||aInt===180);
 
-    // shade A (horizontal, 0°)
     shadeLine(0,'#c0392b');
-    // shade B (angle θ)
     shadeLine(a,'#2980b9');
 
     if(isParallel){
-      // same line → intersection = whole line, sum = line
       drawLineThroughOrigin(0,'#8e44ad','',3.5);
-      // labels inside canvas
-      ctx.save(); ctx.font='bold 13px Georgia';
-      ctx.fillStyle='#8e44ad';
-      const [lx1,ly1]=toC(1.5,0); ctx.fillText('A = B = A∩B',lx1,ly1-14);
-      ctx.fillStyle='#27ae60';
-      const [lx2,ly2]=toC(-1.5,0); ctx.fillText('A+B = A',lx2,ly2+22);
-      ctx.restore();
+      ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText('A+B = A = B', 10, 20); ctx.restore();
+      ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#8e44ad';
+      ctx.textAlign='left'; ctx.textBaseline='bottom';
+      const [lx1,ly1]=toC(1.4,0); ctx.fillText('A∩B = A = B', lx1, ly1-14); ctx.restore();
 
       set('nA','1'); set('nB','1'); set('nI','1'); set('nS','1');
       set('descA','A = x-axis (dim 1)');
@@ -294,27 +302,36 @@ function draw(){
       set('insight','⚠️ A+B is <b>not as large as possible</b> (dim 2) because A∩B is <b>not as small as possible</b> ({0}). The overlap "eats into" the sum.');
     } else {
       drawLineThroughOrigin(0,'#c0392b','A',3);
-      drawLineThroughOrigin(a,'#2980b9','B',3);
-      // intersection = {0}
+      drawLineThroughOrigin(a,'#2980b9','',3);
       dot(0,0,'#8e44ad',8);
       ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#8e44ad';
       const [ox,oy]=toC(0,0); ctx.fillText('A∩B={0}',ox+10,oy-10); ctx.restore();
-      // shade sum = whole plane
       ctx.save(); ctx.fillStyle='rgba(39,174,96,0.06)'; ctx.fillRect(0,0,W,H); ctx.restore();
       ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
       ctx.fillText('A+B = ℝ²',10,20); ctx.restore();
 
       set('nA','1'); set('nB','1'); set('nI','0'); set('nS','2');
       set('descA','A = line at 0° (dim 1)');
-      set('descB',`B = line at ${a}° (dim 1)`);
+      set('descB',`B = line at ${aInt}° (dim 1)`);
       set('descI','A ∩ B = {0} (dim 0)');
       set('descS','A + B = ℝ² (dim 2)');
       set('insight','✓ A+B is <b>as large as possible</b> (1+1=2) because A∩B is <b>as small as possible</b> ({0}). This is a direct sum: A ⊕ B = ℝ².');
     }
+    // rotation arc track
+    { ctx.save();
+      ctx.strokeStyle='rgba(41,128,185,0.22)'; ctx.lineWidth=1.5; ctx.setLineDash([5,7]);
+      ctx.beginPath(); ctx.arc(cx, cy, 2.5*S, 0, Math.PI, true); ctx.stroke();
+      ctx.restore(); }
+    // draggable handle on line B — no label when B = A
+    { const ha=angle*Math.PI/180;
+      const rawRad=lastRawAngle*Math.PI/180;
+      const dot2=Math.cos(rawRad)*Math.cos(ha)+Math.sin(rawRad)*Math.sin(ha);
+      const sign=dot2>=0?1:-1;
+      const [hpx,hpy]=toC(Math.cos(ha)*2.5*sign, Math.sin(ha)*2.5*sign);
+      drawHandle(hpx,hpy,isParallel?'':'B',isParallel?'#8e44ad':'#2980b9'); }
     document.getElementById('sliderWrap').style.visibility='visible';
 
   } else if(caseIdx===1){
-    // Line (z-axis) + xy-plane in R³ — proper 3D isometric view
     const S3 = 46, Sz3 = S3*0.52, ZA3 = Math.PI/5;
     const ocx = W/2 - 20, ocy = H/2 + 30;
     function p3b(x,y,z){
@@ -353,19 +370,17 @@ function draw(){
       ctx.closePath(); ctx.fill(); ctx.restore();
     }
 
-    // angle: 0° = z-axis (perpendicular to plane), 90° = line lies in plane
     const θ1 = angle * Math.PI / 180;
     const inPlane = Math.abs(angle - 90) <= 2;
     const ext1 = 3.2;
     const dy1 = Math.sin(θ1), dz1 = Math.cos(θ1);
 
-    // green volume hint when A+B = ℝ³
     if(!inPlane) drawR3Volume(p3b, ext1);
 
-    // xy-plane (B)
+    // xy-plane (A — fixed)
     const B1_pts = [p3b(-ext1,-ext1,0),p3b(ext1,-ext1,0),p3b(ext1,ext1,0),p3b(-ext1,ext1,0)];
-    fillPoly1(B1_pts,'rgba(41,128,185,0.15)');
-    strokePoly1(B1_pts,'rgba(41,128,185,0.5)',1.5,[4,4]);
+    fillPoly1(B1_pts,'rgba(192,57,43,0.15)');
+    strokePoly1(B1_pts,'rgba(192,57,43,0.5)',1.5,[4,4]);
 
     // coordinate axes
     arrow3b(-ext1,0,0,ext1+0.4,0,0,'#aaa',1.5);
@@ -376,53 +391,73 @@ function draw(){
     const [ayX1,ayY1]=p3b(0,ext1+0.5,0); ctx.fillText('y',ayX1+4,ayY1);
     const [azX1,azY1]=p3b(0,0,ext1+0.5); ctx.fillText('z',azX1+4,azY1); ctx.restore();
 
-    // line A
-    const lineCol1 = inPlane ? '#8e44ad' : '#c0392b';
+    // line B (movable)
+    const lineCol1 = inPlane ? '#8e44ad' : '#2980b9';
     line3b(0,-ext1*dy1,-ext1*dz1, 0,ext1*dy1,ext1*dz1, lineCol1, 3.5);
 
-    // B label
-    ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#2980b9';
-    const [blx1,bly1]=p3b(ext1*0.55,ext1*0.55,0); ctx.fillText('B = xy-plane',blx1,bly1-8);
-    ctx.restore();
+    // A label — only when B is not in the plane (otherwise canvas stays clean)
+    if(!inPlane){
+      ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#c0392b';
+      const [blx1,bly1]=p3b(ext1*0.55,ext1*0.55,0); ctx.fillText('A (xy-plane)',blx1,bly1-8);
+      ctx.restore();
+    }
 
     if(inPlane){
-      ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#8e44ad';
-      const [ilx,ily]=p3b(0,ext1*0.55*dy1,ext1*0.55*dz1);
-      ctx.fillText('A = A∩B',ilx+6,ily-8); ctx.restore();
+      // top-left: sum
       ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
-      ctx.fillText('A+B = xy-plane (dim 2)',10,20); ctx.restore();
-      set('nA','1'); set('nB','2'); set('nI','1'); set('nS','2');
-      set('descA','A = line lying in xy-plane (dim 1)');
-      set('descB','B = xy-plane (dim 2)');
-      set('descI','A ∩ B = line A itself (dim 1)');
+      ctx.fillText('A+B = A',10,20); ctx.restore();
+      // intersection label on the line itself
+      { const [ilx,ily]=p3b(0, -ext1*0.2*dy1, -ext1*0.2*dz1);
+        ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#8e44ad';
+        ctx.textAlign='left'; ctx.textBaseline='middle';
+        ctx.fillText('A∩B = B', ilx+10, ily); ctx.restore(); }
+
+      set('nA','2'); set('nB','1'); set('nI','1'); set('nS','2');
+      set('descA','A = xy-plane (dim 2)');
+      set('descB','B = line lying in xy-plane (dim 1)');
+      set('descI','A ∩ B = line B itself (dim 1)');
       set('descS','A + B = xy-plane (dim 2)');
-      set('insight','⚠️ 1 + 2 − 1 = 2. The line lies <em>inside</em> the plane — it adds no new direction. A+B collapses to just the plane.');
+      set('insight','⚠️ 1 + 2 − 1 = 2. Line B lies <em>inside</em> plane A — it adds no new direction. A+B collapses to just the plane.');
     } else {
       const [ox1,oy1]=p3b(0,0,0);
       ctx.save(); ctx.fillStyle='#8e44ad';
       ctx.beginPath(); ctx.arc(ox1,oy1,8,0,Math.PI*2); ctx.fill();
       ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
-      ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#c0392b';
-      const [alx1,aly1]=p3b(0,ext1*0.55*dy1,ext1*0.55*dz1); ctx.fillText('A',alx1+6,aly1-8);
-      ctx.fillStyle='#8e44ad'; ctx.fillText('A∩B={0}',ox1+10,oy1-12); ctx.restore();
+      // top-left: sum (no dim)
       ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
-      ctx.fillText('A+B = ℝ³ (dim 3)',10,20); ctx.restore();
-      set('nA','1'); set('nB','2'); set('nI','0'); set('nS','3');
-      set('descA',`A = line at ${angle}° from z-axis (dim 1)`);
-      set('descB','B = xy-plane (dim 2)');
+      ctx.fillText('A+B = ℝ³',10,20); ctx.restore();
+      ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#8e44ad';
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText('A∩B = {0}', ox1+12, oy1+14); ctx.restore();
+
+      set('nA','2'); set('nB','1'); set('nI','0'); set('nS','3');
+      set('descA','A = xy-plane (dim 2)');
+      set('descB',`B = line at ${Math.round(angle)}° from z-axis (dim 1)`);
       set('descI','A ∩ B = {0} (dim 0)');
       set('descS','A + B = ℝ³ (dim 3)');
-      set('insight','✓ 1 + 2 − 0 = 3. The line only meets the plane at origin → spans all of ℝ³. Drag θ → 90° to see the line fall into the plane.');
+      set('insight','✓ 1 + 2 − 0 = 3. Line B only meets plane A at origin → spans all of ℝ³. This is a direct sum: A ⊕ B = ℝ³.');
     }
+    // arc track + arcPoints for drag
+    arcPoints=[];
+    { ctx.save();
+      ctx.strokeStyle='rgba(41,128,185,0.28)'; ctx.lineWidth=1.5; ctx.setLineDash([5,7]);
+      ctx.beginPath();
+      for(let t=0;t<=180;t+=0.25){
+        const tr=t*Math.PI/180;
+        const [px,py]=p3b(0, ext1*0.68*Math.sin(tr), ext1*0.68*Math.cos(tr));
+        arcPoints.push({angle:t,px,py});
+        if(t===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.stroke(); ctx.restore(); }
+    // draggable handle on line B — no label when in the plane, but dot always visible
+    { const [hpx,hpy]=p3b(0, ext1*0.65*dy1, ext1*0.65*dz1);
+      drawHandle(hpx,hpy,inPlane?'':'B',inPlane?'#8e44ad':'#2980b9'); }
     document.getElementById('sliderWrap').style.visibility='visible';
 
   } else if(caseIdx===2){
-    // Two planes in R³ — proper isometric 3D view
-    // A = xy-plane, B = plane containing x-axis, tilted by angle θ around x-axis
     const θ = angle * Math.PI / 180;
     const isParallel = (angle === 90);
 
-    // 3D projection params (oblique)
     const S3 = 46, Sz3 = S3*0.52, ZA3 = Math.PI/5;
     const ocx = W/2 - 20, ocy = H/2 + 30;
     function p3(x,y,z){
@@ -464,14 +499,11 @@ function draw(){
       ctx.closePath(); ctx.fill(); ctx.restore();
     }
 
-    const ext = 3.2; // plane extent
+    const ext = 3.2;
 
-    // green volume hint when A+B = ℝ³
     if(!isParallel) drawR3Volume(p3, ext);
 
-    // Plane A corners (xy-plane, z=0)
     const A_pts = [p3(-ext,-ext,0),p3(ext,-ext,0),p3(ext,ext,0),p3(-ext,ext,0)];
-    // Plane B corners: tilted θ around x-axis → y→y·cosθ, z→y·sinθ
     const B_pts = [
       p3(-ext,-ext*Math.sin(θ),-ext*Math.cos(θ)),
       p3( ext,-ext*Math.sin(θ),-ext*Math.cos(θ)),
@@ -480,10 +512,8 @@ function draw(){
     ];
 
     if(isParallel){
-      // same plane → draw as one merged plane
       fillPoly(A_pts,'rgba(150,100,200,0.25)');
       strokePoly(A_pts,'#8e44ad',2);
-      // axes
       arrow3(-ext,0,0,ext+0.3,0,0,'#aaa',1.5);
       arrow3(0,-ext,0,0,ext+0.3,0,'#aaa',1.5);
       arrow3(0,0,-ext,0,0,ext+0.3,'#aaa',1.5);
@@ -491,9 +521,13 @@ function draw(){
       const [axX,axY]=p3(ext+0.5,0,0); ctx.fillText('x',axX,axY+4);
       const [ayX,ayY]=p3(0,ext+0.5,0); ctx.fillText('y',ayX+4,ayY);
       const [azX,azY]=p3(0,0,ext+0.5); ctx.fillText('z',azX+4,azY); ctx.restore();
-      // label
+      // top-left: sum
+      ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText('A+B = A = B', 10, 20); ctx.restore();
+      // intersection label — centred on the plane, not at corner
       ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#8e44ad';
-      const [lx,ly]=p3(ext*0.7,ext*0.7,0); ctx.fillText('A = B',lx,ly-8); ctx.restore();
+      const [lx,ly]=p3(1.0, -0.6, 0); ctx.fillText('A∩B = A = B',lx,ly-8); ctx.restore();
 
       set('nA','2'); set('nB','2'); set('nI','2'); set('nS','2');
       set('descA','A = xy-plane (dim 2)');
@@ -502,13 +536,10 @@ function draw(){
       set('descS','A + B = xy-plane (dim 2)');
       set('insight','⚠️ When A = B, the intersection is maximal and the sum collapses: 2+2−2 = 2. No new direction is added — B contributes nothing new to A.');
     } else {
-      // draw plane A (back half first for depth)
       fillPoly(A_pts,'rgba(192,57,43,0.13)');
       strokePoly(A_pts,'rgba(192,57,43,0.5)',1.5,[4,4]);
-      // draw plane B
       fillPoly(B_pts,'rgba(41,128,185,0.13)');
       strokePoly(B_pts,'rgba(41,128,185,0.5)',1.5,[4,4]);
-      // axes
       arrow3(-ext,0,0,ext+0.3,0,0,'#aaa',1.5);
       arrow3(0,-ext,0,0,ext+0.3,0,'#aaa',1.5);
       arrow3(0,0,-ext,0,0,ext+0.3,'#aaa',1.5);
@@ -516,29 +547,39 @@ function draw(){
       const [axX,axY]=p3(ext+0.5,0,0); ctx.fillText('x',axX,axY+4);
       const [ayX,ayY]=p3(0,ext+0.5,0); ctx.fillText('y',ayX+4,ayY);
       const [azX,azY]=p3(0,0,ext+0.5); ctx.fillText('z',azX+4,azY); ctx.restore();
-      // intersection: x-axis (highlighted)
       line3(-ext,0,0,ext,0,0,'#8e44ad',3.5);
-      // labels
+      // labels — A and A∩B only, B (tilted plane) removed
       ctx.save(); ctx.font='bold 12px Georgia';
       ctx.fillStyle='#c0392b';
-      const [alx,aly]=p3(-ext*0.5, ext*0.7,0); ctx.fillText('A (xy-plane)',alx,aly);
-      ctx.fillStyle='#2980b9';
-      const [blx,bly]=p3(-ext*0.4, ext*0.6*Math.sin(θ), ext*0.6*Math.cos(θ));
-      ctx.fillText('B (tilted plane)',blx,bly+20);
+      const [alx,aly]=p3(-ext*0.85, ext*0.35,0); ctx.fillText('A (xy-plane)',alx,aly);
       ctx.fillStyle='#8e44ad';
-      const [ilx,ily]=p3(ext*0.6,0,0); ctx.fillText('A∩B = x-axis',ilx+4,ily-10);
+      const [ilx,ily]=p3(ext*0.6,0,0); ctx.fillText('A∩B = x-axis',ilx+4,ily+18);
       ctx.restore();
-      // sum label
       ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
       ctx.fillText('A+B = ℝ³',10,20); ctx.restore();
 
       set('nA','2'); set('nB','2'); set('nI','1'); set('nS','3');
       set('descA','A = xy-plane (dim 2)');
-      set('descB',`B = plane at ${angle}° from z-axis (dim 2)`);
+      set('descB',`B = plane at ${Math.round(angle)}° from z-axis (dim 2)`);
       set('descI','A ∩ B = x-axis (dim 1)');
       set('descS','A + B = ℝ³ (dim 3)');
-      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³. Drag θ → 90° to see what happens when the planes coincide.`);
+      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³. Drag the canvas or use the slider to see what happens when the planes coincide.`);
     }
+    // arc track + arcPoints for drag
+    arcPoints=[];
+    { ctx.save();
+      ctx.strokeStyle='rgba(41,128,185,0.28)'; ctx.lineWidth=1.5; ctx.setLineDash([5,7]);
+      ctx.beginPath();
+      for(let t=0;t<=180;t+=0.25){
+        const tr=t*Math.PI/180;
+        const [px,py]=p3(0, ext*0.68*Math.sin(tr), ext*0.68*Math.cos(tr));
+        arcPoints.push({angle:t,px,py});
+        if(t===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.stroke(); ctx.restore(); }
+    // draggable handle on plane B — no label when B = A
+    { const [hpx,hpy]=p3(0, ext*0.65*Math.sin(θ), ext*0.65*Math.cos(θ));
+      drawHandle(hpx,hpy,isParallel?'':'B',isParallel?'#8e44ad':'#2980b9'); }
     document.getElementById('sliderWrap').style.visibility='visible';
     document.getElementById('sliderLabel').textContent='Tilt angle θ of plane B';
   }
@@ -548,15 +589,13 @@ function set(id,html){ document.getElementById(id).innerHTML=html; }
 
 document.getElementById('angleSlider').addEventListener('input',e=>{
   angle=parseInt(e.target.value);
-  // snap to key angles for case 1 (90°) and case 2 (90°)
-  if((caseIdx===1||caseIdx===2) && Math.abs(angle-90)<=4){
-    angle=90;
-    e.target.value=90;
-  }
-  if(caseIdx===0 && Math.abs(angle-90)<=4){
-    angle=90; e.target.value=90;
+  // Case 0 only: snap near 0° and 180° (both = same line as A)
+  if(caseIdx===0){
+    if(angle<=3){ angle=0; e.target.value=0; }
+    else if(angle>=177){ angle=180; e.target.value=180; }
   }
   document.getElementById('angleVal').textContent=`θ = ${angle}°`;
+  if(caseIdx===0) lastRawAngle=angle;
   draw();
 });
 
@@ -571,7 +610,6 @@ function setCase(ci){
     document.getElementById('angleVal').textContent='θ = 90°';
     document.getElementById('sliderWrap').style.visibility='visible';
     document.getElementById('sliderLabel').textContent='Tilt angle θ of line B';
-
   } else if(ci===1){
     angle=0;
     document.getElementById('angleSlider').min=0;
@@ -579,7 +617,7 @@ function setCase(ci){
     document.getElementById('angleSlider').value=0;
     document.getElementById('angleVal').textContent='θ = 0°';
     document.getElementById('sliderWrap').style.visibility='visible';
-    document.getElementById('sliderLabel').textContent='Tilt angle θ of line A';
+    document.getElementById('sliderLabel').textContent='Tilt angle θ of line B';
   } else if(ci===2){
     angle=0;
     document.getElementById('angleSlider').min=0;
@@ -591,6 +629,71 @@ function setCase(ci){
   }
   draw();
 }
+
+// ── Drag interaction ────────────────────────────────────────────────────────
+let isDragging=false, dragStartX=0, dragStartAngle=0, lastRawAngle=90;
+let arcPoints=[];
+
+function getPx(e){
+  const r=canvas.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*W/r.width, y:(e.clientY-r.top)*H/r.height };
+}
+
+canvas.addEventListener('pointerdown', e=>{
+  isDragging=true;
+  canvas.setPointerCapture(e.pointerId);
+  const p=getPx(e);
+  dragStartX=p.x; dragStartAngle=angle;
+  if(caseIdx===0) doDrag2D(p.x,p.y);
+});
+
+canvas.addEventListener('pointermove', e=>{
+  if(!isDragging) return;
+  const p=getPx(e);
+  if(caseIdx===0){
+    doDrag2D(p.x,p.y);
+  } else {
+    let bestA=angle, bestD=Infinity;
+    for(const pt of arcPoints){
+      const d=Math.hypot(p.x-pt.px, p.y-pt.py);
+      if(d<bestD){ bestD=d; bestA=pt.angle; }
+    }
+    // snap to 90° within ±4° so the special state is reachable
+    if(Math.abs(bestA - 90) < 4) bestA = 90;
+    angle=bestA; syncSlider(); draw();
+  }
+});
+
+canvas.addEventListener('pointerup', ()=>{ isDragging=false; });
+
+function doDrag2D(px,py){
+  if(py > cy + 2) return;
+  const dx=px-cx, dy=cy-py;
+  if(Math.abs(dx)<2&&Math.abs(dy)<2) return;
+  const raw=Math.atan2(dy,dx)*180/Math.PI;
+  lastRawAngle=raw;
+  let a=raw%180;
+  if(a<0) a+=180;
+  // snap near 0° and 180° (same line)
+  if(a<=3) a=0;
+  else if(a>=177) a=180;
+  angle=a; syncSlider(); draw();
+}
+
+function syncSlider(){
+  const v=Math.round(angle);
+  document.getElementById('angleSlider').value=v;
+  document.getElementById('angleVal').textContent=`θ = ${v}°`;
+}
+
+// ── Mobile: scale canvas to fit viewport ──────────────────────────────────
+function fitCanvas(){
+  const avail = Math.min(W, window.innerWidth - 24);
+  canvas.style.width  = avail + 'px';
+  canvas.style.height = avail + 'px';
+}
+fitCanvas();
+window.addEventListener('resize', fitCanvas);
 
 draw();
 </script>
