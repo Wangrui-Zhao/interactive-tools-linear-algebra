@@ -661,7 +661,7 @@ canvas.addEventListener('pointermove', e=>{
     // best aligns with pointer direction. Tolerates dragging off the arc path.
     const pdx=p.x-arcCenter[0], pdy=p.y-arcCenter[1];
     const pLen=Math.sqrt(pdx*pdx+pdy*pdy);
-    if(pLen<5){ return; }
+    if(pLen<30){ return; } // enlarged dead zone — prevents axis-crossing jump
     let bestA=angle, bestDot=-Infinity;
     for(const pt of arcPoints){
       const adx=pt.px-arcCenter[0], ady=pt.py-arcCenter[1];
@@ -669,6 +669,8 @@ canvas.addEventListener('pointermove', e=>{
       const dot=(pdx*adx+pdy*ady)/(pLen*aLen);
       if(dot>bestDot){ bestDot=dot; bestA=pt.angle; }
     }
+    // rate-limit: prevent large jumps when dragging through center area
+    if(Math.abs(bestA-angle)>25) bestA=angle+Math.sign(bestA-angle)*25;
     // snap to 90° with hysteresis for case 2 (prevents jumping)
     if(caseIdx === 1){
       if(Math.abs(bestA - 90) < 4) bestA = 90;
