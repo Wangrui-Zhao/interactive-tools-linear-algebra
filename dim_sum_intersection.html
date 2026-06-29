@@ -31,6 +31,7 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     cursor: grab;
     max-width: 100%;
+    touch-action: none;
   }
   canvas:active { cursor: grabbing; }
 
@@ -106,7 +107,7 @@
   <div class="side">
     <div class="slider-wrap" id="sliderWrap" style="visibility:hidden">
       <label id="sliderLabel">Tilt angle θ of line B</label>
-      <input type="range" id="angleSlider" min="0" max="180" value="90" step="1">
+      <input type="range" id="angleSlider" min="0" max="90" value="90" step="1">
       <div class="angle-val" id="angleVal">θ = 90°</div>
     </div>
 
@@ -256,12 +257,12 @@ function drawR3Volume(p3fn, ext){
 // ── Handle helper ──────────────────────────────────────────────────────────
 // Label is always offset outward from the canvas centre so it never lands on
 // an axis regardless of which angle or which case we're in.
-function drawHandle(px, py, lbl, color){
+function drawHandle(px, py, lbl, color, lblColor){
   ctx.save();
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=2; ctx.stroke();
-  ctx.font='bold 11px Georgia'; ctx.fillStyle=color;
+  ctx.font='bold 11px Georgia'; ctx.fillStyle=lblColor||color;
   const tcx=px-cx, tcy=py-cy;
   const len=Math.sqrt(tcx*tcx+tcy*tcy)||1;
   // +5 rightward bias so a perfectly vertical line still puts text to the right
@@ -292,14 +293,14 @@ function draw(){
       ctx.fillText('A+B = A = B', 10, 20); ctx.restore();
       ctx.save(); ctx.font='bold 13px Georgia'; ctx.fillStyle='#8e44ad';
       ctx.textAlign='left'; ctx.textBaseline='bottom';
-      const [lx1,ly1]=toC(1.4,0); ctx.fillText('A∩B = A = B', lx1, ly1-14); ctx.restore();
+      const [lx1,ly1]=toC(0,0); ctx.textAlign='center'; ctx.fillText('A∩B = A = B', lx1, ly1-32); ctx.restore();
 
       set('nA','1'); set('nB','1'); set('nI','1'); set('nS','1');
       set('descA','A = x-axis (dim 1)');
       set('descB','B = x-axis (dim 1) — same as A');
       set('descI','A ∩ B = x-axis (dim 1)');
       set('descS','A + B = x-axis (dim 1)');
-      set('insight','⚠️ A+B is <b>not as large as possible</b> (dim 2) because A∩B is <b>not as small as possible</b> ({0}). The overlap "eats into" the sum.');
+      set('insight','⚠️ A+B is <b>not as large as possible</b> (dim 2) because A∩B is <b>not as small as possible</b> ({0}). The overlap "eats into" the sum.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
     } else {
       drawLineThroughOrigin(0,'#c0392b','A',3);
       drawLineThroughOrigin(a,'#2980b9','',3);
@@ -315,12 +316,12 @@ function draw(){
       set('descB',`B = line at ${aInt}° (dim 1)`);
       set('descI','A ∩ B = {0} (dim 0)');
       set('descS','A + B = ℝ² (dim 2)');
-      set('insight','✓ A+B is <b>as large as possible</b> (1+1=2) because A∩B is <b>as small as possible</b> ({0}). This is a direct sum: A ⊕ B = ℝ².');
+      set('insight','✓ A+B is <b>as large as possible</b> (1+1=2) because A∩B is <b>as small as possible</b> ({0}). This is a direct sum: A ⊕ B = ℝ².<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
     }
-    // rotation arc track
+    // rotation arc track — right quarter only (90° → 0°)
     { ctx.save();
       ctx.strokeStyle='rgba(41,128,185,0.22)'; ctx.lineWidth=1.5; ctx.setLineDash([5,7]);
-      ctx.beginPath(); ctx.arc(cx, cy, 2.5*S, 0, Math.PI, true); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, 2.5*S, 0, -Math.PI/2, true); ctx.stroke();
       ctx.restore(); }
     // draggable handle on line B — no label when B = A
     { const ha=angle*Math.PI/180;
@@ -328,7 +329,7 @@ function draw(){
       const dot2=Math.cos(rawRad)*Math.cos(ha)+Math.sin(rawRad)*Math.sin(ha);
       const sign=dot2>=0?1:-1;
       const [hpx,hpy]=toC(Math.cos(ha)*2.5*sign, Math.sin(ha)*2.5*sign);
-      drawHandle(hpx,hpy,isParallel?'':'B',isParallel?'#8e44ad':'#2980b9'); }
+      drawHandle(hpx,hpy,isParallel?'':'B',isParallel?'#8e44ad':'#e8a020',isParallel?'#8e44ad':'#2980b9'); }
     document.getElementById('sliderWrap').style.visibility='visible';
 
   } else if(caseIdx===1){
@@ -417,7 +418,7 @@ function draw(){
       set('descB','B = line lying in xy-plane (dim 1)');
       set('descI','A ∩ B = line B itself (dim 1)');
       set('descS','A + B = xy-plane (dim 2)');
-      set('insight','⚠️ 1 + 2 − 1 = 2. Line B lies <em>inside</em> plane A — it adds no new direction. A+B collapses to just the plane.');
+      set('insight','⚠️ 1 + 2 − 1 = 2. Line B lies <em>inside</em> plane A — it adds no new direction. A+B collapses to just the plane.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
     } else {
       const [ox1,oy1]=p3b(0,0,0);
       ctx.save(); ctx.fillStyle='#8e44ad';
@@ -435,10 +436,10 @@ function draw(){
       set('descB',`B = line at ${Math.round(angle)}° from z-axis (dim 1)`);
       set('descI','A ∩ B = {0} (dim 0)');
       set('descS','A + B = ℝ³ (dim 3)');
-      set('insight','✓ 1 + 2 − 0 = 3. Line B only meets plane A at origin → spans all of ℝ³. This is a direct sum: A ⊕ B = ℝ³.');
+      set('insight','✓ 1 + 2 − 0 = 3. Line B only meets plane A at origin → spans all of ℝ³. This is a direct sum: A ⊕ B = ℝ³.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
     }
     // arc track + arcPoints for drag
-    arcPoints=[];
+    arcPoints=[]; arcCenter=p3b(0,0,0);
     { ctx.save();
       ctx.strokeStyle='rgba(41,128,185,0.28)'; ctx.lineWidth=1.5; ctx.setLineDash([5,7]);
       ctx.beginPath();
@@ -451,7 +452,7 @@ function draw(){
       ctx.stroke(); ctx.restore(); }
     // draggable handle on line B — no label when in the plane, but dot always visible
     { const [hpx,hpy]=p3b(0, ext1*0.65*dy1, ext1*0.65*dz1);
-      drawHandle(hpx,hpy,inPlane?'':'B',inPlane?'#8e44ad':'#2980b9'); }
+      drawHandle(hpx,hpy,inPlane?'':'B',inPlane?'#8e44ad':'#e8a020',inPlane?'#8e44ad':'#2980b9'); }
     document.getElementById('sliderWrap').style.visibility='visible';
 
   } else if(caseIdx===2){
@@ -534,7 +535,7 @@ function draw(){
       set('descB','B = xy-plane (same plane, dim 2)');
       set('descI','A ∩ B = xy-plane (dim 2)');
       set('descS','A + B = xy-plane (dim 2)');
-      set('insight','⚠️ When A = B, the intersection is maximal and the sum collapses: 2+2−2 = 2. No new direction is added — B contributes nothing new to A.');
+      set('insight','⚠️ When A = B, the intersection is maximal and the sum collapses: 2+2−2 = 2. No new direction is added — B contributes nothing new to A.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
     } else {
       fillPoly(A_pts,'rgba(192,57,43,0.13)');
       strokePoly(A_pts,'rgba(192,57,43,0.5)',1.5,[4,4]);
@@ -553,7 +554,7 @@ function draw(){
       ctx.fillStyle='#c0392b';
       const [alx,aly]=p3(-ext*0.85, ext*0.35,0); ctx.fillText('A (xy-plane)',alx,aly);
       ctx.fillStyle='#8e44ad';
-      const [ilx,ily]=p3(ext*0.6,0,0); ctx.fillText('A∩B = x-axis',ilx+4,ily+18);
+      const [ilx,ily]=p3(ext*0.25,0,0); ctx.fillText('A∩B = x-axis',ilx+4,ily+18);
       ctx.restore();
       ctx.save(); ctx.font='bold 12px Georgia'; ctx.fillStyle='#27ae60';
       ctx.fillText('A+B = ℝ³',10,20); ctx.restore();
@@ -563,10 +564,10 @@ function draw(){
       set('descB',`B = plane at ${Math.round(angle)}° from z-axis (dim 2)`);
       set('descI','A ∩ B = x-axis (dim 1)');
       set('descS','A + B = ℝ³ (dim 3)');
-      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³. Drag the canvas or use the slider to see what happens when the planes coincide.`);
+      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>`);
     }
     // arc track + arcPoints for drag
-    arcPoints=[];
+    arcPoints=[]; arcCenter=p3(0,0,0);
     { ctx.save();
       ctx.strokeStyle='rgba(41,128,185,0.28)'; ctx.lineWidth=1.5; ctx.setLineDash([5,7]);
       ctx.beginPath();
@@ -579,7 +580,7 @@ function draw(){
       ctx.stroke(); ctx.restore(); }
     // draggable handle on plane B — no label when B = A
     { const [hpx,hpy]=p3(0, ext*0.65*Math.sin(θ), ext*0.65*Math.cos(θ));
-      drawHandle(hpx,hpy,isParallel?'':'B',isParallel?'#8e44ad':'#2980b9'); }
+      drawHandle(hpx,hpy,isParallel?'':'B',isParallel?'#8e44ad':'#e8a020',isParallel?'#8e44ad':'#2980b9'); }
     document.getElementById('sliderWrap').style.visibility='visible';
     document.getElementById('sliderLabel').textContent='Tilt angle θ of plane B';
   }
@@ -592,7 +593,7 @@ document.getElementById('angleSlider').addEventListener('input',e=>{
   // Case 0 only: snap near 0° and 180° (both = same line as A)
   if(caseIdx===0){
     if(angle<=3){ angle=0; e.target.value=0; }
-    else if(angle>=177){ angle=180; e.target.value=180; }
+    else if(angle>=87){ angle=90; e.target.value=90; }
   }
   document.getElementById('angleVal').textContent=`θ = ${angle}°`;
   if(caseIdx===0) lastRawAngle=angle;
@@ -601,11 +602,12 @@ document.getElementById('angleSlider').addEventListener('input',e=>{
 
 function setCase(ci){
   caseIdx=ci;
+  snapped90=false;
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===ci));
   if(ci===0){
     angle=90;
     document.getElementById('angleSlider').min=0;
-    document.getElementById('angleSlider').max=180;
+    document.getElementById('angleSlider').max=90;
     document.getElementById('angleSlider').value=90;
     document.getElementById('angleVal').textContent='θ = 90°';
     document.getElementById('sliderWrap').style.visibility='visible';
@@ -632,7 +634,8 @@ function setCase(ci){
 
 // ── Drag interaction ────────────────────────────────────────────────────────
 let isDragging=false, dragStartX=0, dragStartAngle=0, lastRawAngle=90;
-let arcPoints=[];
+let arcPoints=[], arcCenter=[0,0];
+let snapped90=false; // hysteresis state for case 2 snap
 
 function getPx(e){
   const r=canvas.getBoundingClientRect();
@@ -649,17 +652,35 @@ canvas.addEventListener('pointerdown', e=>{
 
 canvas.addEventListener('pointermove', e=>{
   if(!isDragging) return;
+  e.preventDefault();
   const p=getPx(e);
   if(caseIdx===0){
     doDrag2D(p.x,p.y);
   } else {
-    let bestA=angle, bestD=Infinity;
+    // Direction-based matching: find arc angle whose direction from arc center
+    // best aligns with pointer direction. Tolerates dragging off the arc path.
+    const pdx=p.x-arcCenter[0], pdy=p.y-arcCenter[1];
+    const pLen=Math.sqrt(pdx*pdx+pdy*pdy);
+    if(pLen<5){ return; }
+    let bestA=angle, bestDot=-Infinity;
     for(const pt of arcPoints){
-      const d=Math.hypot(p.x-pt.px, p.y-pt.py);
-      if(d<bestD){ bestD=d; bestA=pt.angle; }
+      const adx=pt.px-arcCenter[0], ady=pt.py-arcCenter[1];
+      const aLen=Math.sqrt(adx*adx+ady*ady)||1;
+      const dot=(pdx*adx+pdy*ady)/(pLen*aLen);
+      if(dot>bestDot){ bestDot=dot; bestA=pt.angle; }
     }
-    // snap to 90° within ±4° so the special state is reachable
-    if(Math.abs(bestA - 90) < 4) bestA = 90;
+    // snap to 90° with hysteresis for case 2 (prevents jumping)
+    if(caseIdx === 1){
+      if(Math.abs(bestA - 90) < 4) bestA = 90;
+    } else {
+      // enter snap: within ±1°; exit snap: must drag past ±5°
+      if(snapped90){
+        if(Math.abs(bestA - 90) > 5) snapped90=false;
+        else bestA=90;
+      } else {
+        if(Math.abs(bestA - 90) < 1){ snapped90=true; bestA=90; }
+      }
+    }
     angle=bestA; syncSlider(); draw();
   }
 });
@@ -667,16 +688,15 @@ canvas.addEventListener('pointermove', e=>{
 canvas.addEventListener('pointerup', ()=>{ isDragging=false; });
 
 function doDrag2D(px,py){
-  if(py > cy + 2) return;
+  if(py > cy + 2) return;   // lower half off-limits
+  if(px < cx - 2) return;   // left half off-limits
   const dx=px-cx, dy=cy-py;
   if(Math.abs(dx)<2&&Math.abs(dy)<2) return;
   const raw=Math.atan2(dy,dx)*180/Math.PI;
-  lastRawAngle=raw;
-  let a=raw%180;
-  if(a<0) a+=180;
-  // snap near 0° and 180° (same line)
+  let a=Math.max(0, Math.min(90, raw));
   if(a<=3) a=0;
-  else if(a>=177) a=180;
+  else if(a>=87) a=90;
+  lastRawAngle=a;
   angle=a; syncSlider(); draw();
 }
 
