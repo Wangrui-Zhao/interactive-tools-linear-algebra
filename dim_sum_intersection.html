@@ -300,7 +300,7 @@ function draw(){
       set('descB','B = x-axis (dim 1) — same as A');
       set('descI','A ∩ B = x-axis (dim 1)');
       set('descS','A + B = x-axis (dim 1)');
-      set('insight','⚠️ A+B is <b>not as large as possible</b> (dim 2) because A∩B is <b>not as small as possible</b> ({0}). The overlap "eats into" the sum.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
+      set('insight','⚠️ A+B is <b>not as large as possible</b> (dim 2) because A∩B is <b>not as small as possible</b> ({0}). The overlap "eats into" the sum.');
     } else {
       drawLineThroughOrigin(0,'#c0392b','A',3);
       drawLineThroughOrigin(a,'#2980b9','',3);
@@ -316,7 +316,7 @@ function draw(){
       set('descB',`B = line at θ = ${aInt}° (dim 1)`);
       set('descI','A ∩ B = {0} (dim 0)');
       set('descS','A + B = ℝ² (dim 2)');
-      set('insight','✓ A+B is <b>as large as possible</b> (1+1=2) because A∩B is <b>as small as possible</b> ({0}). This is a direct sum: A ⊕ B = ℝ².<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
+      set('insight','✓ A+B is <b>as large as possible</b> (1+1=2) because A∩B is <b>as small as possible</b> ({0}). This is a direct sum: A ⊕ B = ℝ².<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to see when the two lines collapse into one.</span>');
     }
     // rotation arc track — right quarter only (90° → 0°)
     { ctx.save();
@@ -418,7 +418,7 @@ function draw(){
       set('descB','B = line lying in xy-plane (dim 1)');
       set('descI','A ∩ B = line B itself (dim 1)');
       set('descS','A + B = xy-plane (dim 2)');
-      set('insight','⚠️ 1 + 2 − 1 = 2. Line B lies <em>inside</em> plane A — it adds no new direction. A+B collapses to just the plane.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
+      set('insight','⚠️ 1 + 2 − 1 = 2. Line B lies <em>inside</em> plane A — it adds no new direction. A+B collapses to just the plane.');
     } else {
       const [ox1,oy1]=p3b(0,0,0);
       ctx.save(); ctx.fillStyle='#8e44ad';
@@ -436,7 +436,7 @@ function draw(){
       set('descB',`B = line at θ = ${Math.round(angle)}° (dim 1)`);
       set('descI','A ∩ B = {0} (dim 0)');
       set('descS','A + B = ℝ³ (dim 3)');
-      set('insight','✓ 1 + 2 − 0 = 3. Line B only meets plane A at origin → spans all of ℝ³. This is a direct sum: A ⊕ B = ℝ³.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
+      set('insight','✓ 1 + 2 − 0 = 3. Line B only meets plane A at origin → spans all of ℝ³. This is a direct sum: A ⊕ B = ℝ³.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to see when the line falls into the plane.</span>');
     }
     // arc track + arcPoints for drag
     arcPoints=[]; arcCenter=p3b(0,0,0);
@@ -535,7 +535,7 @@ function draw(){
       set('descB','B = xy-plane (same plane, dim 2)');
       set('descI','A ∩ B = xy-plane (dim 2)');
       set('descS','A + B = xy-plane (dim 2)');
-      set('insight','⚠️ When A = B, the intersection is maximal and the sum collapses: 2+2−2 = 2. No new direction is added — B contributes nothing new to A.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
+      set('insight','⚠️ When A = B, the intersection is maximal and the sum collapses: 2+2−2 = 2. No new direction is added — B contributes nothing new to A.');
     } else {
       fillPoly(A_pts,'rgba(192,57,43,0.13)');
       strokePoly(A_pts,'rgba(192,57,43,0.5)',1.5,[4,4]);
@@ -564,7 +564,7 @@ function draw(){
       set('descB',`B = plane at θ = ${Math.round(angle)}° (dim 2)`);
       set('descI','A ∩ B = x-axis (dim 1)');
       set('descS','A + B = ℝ³ (dim 3)');
-      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>`);
+      set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to see when the two planes coincide.</span>`);
     }
     // arc track + arcPoints for drag
     arcPoints=[]; arcCenter=p3(0,0,0);
