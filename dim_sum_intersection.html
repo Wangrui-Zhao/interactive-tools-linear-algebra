@@ -313,7 +313,7 @@ function draw(){
 
       set('nA','1'); set('nB','1'); set('nI','0'); set('nS','2');
       set('descA','A = line at 0° (dim 1)');
-      set('descB',`B = line at ${aInt}° (dim 1)`);
+      set('descB',`B = line at θ = ${aInt}° (dim 1)`);
       set('descI','A ∩ B = {0} (dim 0)');
       set('descS','A + B = ℝ² (dim 2)');
       set('insight','✓ A+B is <b>as large as possible</b> (1+1=2) because A∩B is <b>as small as possible</b> ({0}). This is a direct sum: A ⊕ B = ℝ².<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
@@ -433,7 +433,7 @@ function draw(){
 
       set('nA','2'); set('nB','1'); set('nI','0'); set('nS','3');
       set('descA','A = xy-plane (dim 2)');
-      set('descB',`B = line at ${Math.round(angle)}° from z-axis (dim 1)`);
+      set('descB',`B = line at θ = ${Math.round(angle)}° (dim 1)`);
       set('descI','A ∩ B = {0} (dim 0)');
       set('descS','A + B = ℝ³ (dim 3)');
       set('insight','✓ 1 + 2 − 0 = 3. Line B only meets plane A at origin → spans all of ℝ³. This is a direct sum: A ⊕ B = ℝ³.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>');
@@ -561,7 +561,7 @@ function draw(){
 
       set('nA','2'); set('nB','2'); set('nI','1'); set('nS','3');
       set('descA','A = xy-plane (dim 2)');
-      set('descB',`B = plane at ${Math.round(angle)}° from z-axis (dim 2)`);
+      set('descB',`B = plane at θ = ${Math.round(angle)}° (dim 2)`);
       set('descI','A ∩ B = x-axis (dim 1)');
       set('descS','A + B = ℝ³ (dim 3)');
       set('insight',`✓ 2 + 2 − 1 = 3. The two planes meet exactly along the x-axis. Together they span all of ℝ³.<br><span style="color:#bbb;font-size:0.9em">Drag the yellow point or use the slider to explore.</span>`);
