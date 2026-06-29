@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=800">
 <title>Matrix Multiplication — AB and BA</title>
 <style>
   * { box-sizing: border-box; }
@@ -99,6 +99,12 @@
     color: #ccc; font-size: 1.4em;
   }
 
+  /* ── scrollable equation wrappers ── */
+  .eq-scroll {
+    width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    display: flex; justify-content: center;
+  }
+
   .formula-box {
     margin-top: 24px;
     min-height: 72px;
@@ -146,7 +152,7 @@
 <p class="sub">Hover over a result entry to see which products are summed.<br>Edit any value to update live.</p>
 
 <!-- ═══════════════ AB section ═══════════════ -->
-<div class="equation" id="eqAB">
+<div class="eq-scroll"><div class="equation" id="eqAB">
 
   <div class="mat-wrap">
     <div class="mat-label">
@@ -215,7 +221,7 @@
     </div>
   </div>
 
-</div>
+</div></div>
 
 <div class="error-banner" id="errAB">
   The product <i>AB</i> is only defined if the number of columns of <i>A</i> is the same as the number of rows of <i>B</i>.
@@ -226,7 +232,7 @@
 
 <!-- ═══════════════ BA section ═══════════════ -->
 
-<div class="equation" id="eqBA">
+<div class="eq-scroll"><div class="equation" id="eqBA">
 
   <div class="mat-wrap">
     <div class="mat-label">
@@ -279,8 +285,7 @@
     </div>
   </div>
 
-</div>
-
+</div></div>
 
 <div class="error-banner" id="errBA">
   The product <i>BA</i> is only defined if the number of columns of <i>B</i> is the same as the number of rows of <i>A</i>.
