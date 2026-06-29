@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=800">
 <title>Kernel · Image · Preimage</title>
 <style>
   * { box-sizing: border-box; }
@@ -468,7 +468,7 @@ function updateSide(A,r,kd,id){
       const idf=imageDir(A); const sf=fmt(idf);
       text=`im(f) = span<b>(${sf})</b><br>Drag x — f(x) stays on the green line.`;
     } else         text='im(f) = {0} — f maps everything to 0.';
-    hint='';
+    hint='Drag the red point x in the domain.';
   } else {
     title='Preimage f⁻¹(y)';
     const sol=solveAx(A,dragY);
@@ -480,7 +480,7 @@ function updateSide(A,r,kd,id){
       text='Preimage = x₀ + ker(f)<br>Any point on the line works as x₀ — different arrows, same line.';
     else
       text='Preimage = ℝ² (f=0, y=0).';
-    hint='';
+    hint='Drag the blue point y in the codomain.';
   }
   document.getElementById('infoTitle').textContent=title;
   document.getElementById('infoText').innerHTML=text;
